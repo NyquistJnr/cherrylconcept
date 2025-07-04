@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -419,7 +418,7 @@ export default function ProductListingPage() {
                   Add to Cart
                 </button>
                 <Link
-                  href={`/products/${product.id}`}
+                  href={`/shop/${product.id}`}
                   className="flex-1 border-2 border-black text-black py-3 rounded-full font-semibold hover:bg-black hover:text-white transition-colors text-center"
                 >
                   View Details
