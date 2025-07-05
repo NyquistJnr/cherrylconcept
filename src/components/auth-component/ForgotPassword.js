@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "react-toastify";
 import {
   FiMail,
   FiLock,
@@ -92,14 +93,96 @@ export default function ForgotPasswordComponent() {
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/forgot-password/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email,
+          }),
+        }
+      );
 
-      // Mock successful email send
-      setCurrentStep("sent");
-      setCountdown(60); // Start 60 second countdown
+      const data = await response.json();
+
+      if (response.ok) {
+        // Email sent successfully
+        console.log("Password reset email sent:", data);
+
+        // Show success toast
+        toast.success(
+          "Password reset email sent successfully! Check your inbox.",
+          {
+            position: "top-right",
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
+
+        setCurrentStep("sent");
+        setCountdown(60); // Start 60 second countdown
+      } else {
+        // Handle API errors
+        if (data.errors) {
+          if (data.errors.email) {
+            const errorMessage = Array.isArray(data.errors.email)
+              ? data.errors.email[0]
+              : data.errors.email;
+            setErrors({ email: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.non_field_errors) {
+            const errorMessage = data.errors.non_field_errors[0];
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else {
+            const errorMessage =
+              "Failed to send reset email. Please try again.";
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          }
+        } else if (data.message) {
+          setErrors({ general: data.message });
+          toast.error(data.message, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        } else {
+          const errorMessage = "Failed to send reset email. Please try again.";
+          setErrors({ general: errorMessage });
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        }
+      }
     } catch (error) {
-      setErrors({ general: "Something went wrong. Please try again." });
+      console.error("Forgot password error:", error);
+      const errorMessage =
+        "Network error. Please check your connection and try again.";
+      setErrors({ general: errorMessage });
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -111,11 +194,43 @@ export default function ForgotPasswordComponent() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setCountdown(60);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/forgot-password/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setCountdown(60);
+        toast.success("Reset email sent again! Check your inbox.", {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } else {
+        const errorMessage = "Failed to resend email. Please try again.";
+        setErrors({ general: errorMessage });
+        toast.error(errorMessage, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+      }
     } catch (error) {
-      setErrors({ general: "Failed to resend email. Please try again." });
+      console.error("Resend email error:", error);
+      const errorMessage = "Failed to resend email. Please try again.";
+      setErrors({ general: errorMessage });
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -147,13 +262,115 @@ export default function ForgotPasswordComponent() {
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/reset-password/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            token: resetToken,
+            new_password: resetData.password,
+            confirm_password: resetData.confirmPassword,
+          }),
+        }
+      );
 
-      // Redirect to login with success message
-      router.push("/login?message=Password reset successfully");
+      const data = await response.json();
+
+      if (response.ok) {
+        // Password reset successful
+        console.log("Password reset successful:", data);
+
+        // Show success toast
+        toast.success(
+          "Password reset successfully! You can now sign in with your new password.",
+          {
+            position: "top-right",
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
+
+        // Redirect to login with success message
+        router.push("/login?message=Password reset successfully");
+      } else {
+        // Handle API errors
+        if (data.errors) {
+          if (data.errors.token) {
+            const errorMessage = Array.isArray(data.errors.token)
+              ? data.errors.token[0]
+              : data.errors.token;
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.non_field_errors) {
+            const errorMessage = data.errors.non_field_errors[0];
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.new_password) {
+            const errorMessage = Array.isArray(data.errors.new_password)
+              ? data.errors.new_password[0]
+              : data.errors.new_password;
+            setErrors({ password: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.confirm_password) {
+            const errorMessage = Array.isArray(data.errors.confirm_password)
+              ? data.errors.confirm_password[0]
+              : data.errors.confirm_password;
+            setErrors({ confirmPassword: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else {
+            const errorMessage = "Failed to reset password. Please try again.";
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          }
+        } else if (data.message) {
+          setErrors({ general: data.message });
+          toast.error(data.message, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        } else {
+          const errorMessage = "Failed to reset password. Please try again.";
+          setErrors({ general: errorMessage });
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        }
+      }
     } catch (error) {
-      setErrors({ general: "Failed to reset password. Please try again." });
+      console.error("Reset password error:", error);
+      const errorMessage =
+        "Network error. Please check your connection and try again.";
+      setErrors({ general: errorMessage });
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setIsLoading(false);
     }

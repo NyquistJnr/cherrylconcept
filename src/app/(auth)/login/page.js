@@ -3,14 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 import {
   FiMail,
   FiLock,
   FiEye,
   FiEyeOff,
-  FiUser,
-  FiPhone,
-  FiCheck,
   FiAlertCircle,
   FiLoader,
 } from "react-icons/fi";
@@ -26,6 +24,39 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({});
   const [rememberMe, setRememberMe] = useState(false);
 
+  // Secure token storage utility
+  const storeTokensSecurely = (tokens, userId) => {
+    try {
+      // Store tokens in httpOnly cookies via API call (most secure for production)
+      fetch("/api/auth/set-tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          accessToken: tokens.access,
+          refreshToken: tokens.refresh,
+          userId: userId,
+        }),
+      });
+
+      // Store user ID in sessionStorage (cleared when tab closes)
+      sessionStorage.setItem("userId", userId);
+
+      // Store non-sensitive user data in localStorage for convenience
+      const userData = {
+        id: userId,
+        // Add other non-sensitive user data here if needed
+      };
+      localStorage.setItem("userData", JSON.stringify(userData));
+    } catch (error) {
+      console.error("Error storing tokens:", error);
+      // Fallback to localStorage if cookie storage fails
+      localStorage.setItem("accessToken", tokens.access);
+      localStorage.setItem("refreshToken", tokens.refresh);
+      localStorage.setItem("userId", userId);
+    }
+  };
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -68,20 +99,110 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+          }),
+        }
+      );
 
-      // Mock successful login
-      if (
-        formData.email === "demo@headwear.com" &&
-        formData.password === "password"
-      ) {
+      const data = await response.json();
+
+      if (response.ok) {
+        // Login successful
+        console.log("Login successful:", data);
+
+        // Store tokens and user data securely
+        storeTokensSecurely(data.tokens, data.user.id);
+
+        // Show success toast
+        toast.success(`Welcome back, ${data.user.first_name}!`, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Redirect to account page
         router.push("/account");
       } else {
-        setErrors({ general: "Invalid email or password" });
+        // Handle API errors
+        if (data.errors) {
+          // Handle structured errors
+          if (data.errors.non_field_errors) {
+            const errorMessage = data.errors.non_field_errors[0];
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+          } else if (data.errors.email) {
+            const errorMessage = Array.isArray(data.errors.email)
+              ? data.errors.email[0]
+              : data.errors.email;
+            setErrors({ email: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.password) {
+            const errorMessage = Array.isArray(data.errors.password)
+              ? data.errors.password[0]
+              : data.errors.password;
+            setErrors({ password: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else {
+            const errorMessage = "Invalid email or password";
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          }
+        } else if (data.message) {
+          setErrors({ general: data.message });
+          toast.error(data.message, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        } else {
+          const errorMessage = "Invalid email or password";
+          setErrors({ general: errorMessage });
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        }
       }
     } catch (error) {
-      setErrors({ general: "Something went wrong. Please try again." });
+      console.error("Login error:", error);
+      const errorMessage =
+        "Network error. Please check your connection and try again.";
+      setErrors({ general: errorMessage });
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -99,16 +220,6 @@ export default function LoginPage() {
               </h1>
               <p className="text-gray-600">Sign in to your HeadWear account</p>
             </div>
-
-            {/* Error Message */}
-            {errors.general && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center space-x-2">
-                  <FiAlertCircle className="w-4 h-4 text-red-600" />
-                  <span className="text-sm text-red-700">{errors.general}</span>
-                </div>
-              </div>
-            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}

@@ -1,177 +1,121 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const allProducts = [
-  {
-    id: 1,
-    name: "Classic Baseball Cap",
-    price: 29.99,
-    originalPrice: 39.99,
-    image: "/images/hairs/7.jpg",
-    images: [
-      "/images/hairs/7.jpg",
-      "/images/hairs/7-alt1.jpg",
-      "/images/hairs/7-alt2.jpg",
-      "/images/hairs/7-alt3.jpg",
-    ],
-    category: "caps",
-    colors: ["black", "navy", "white", "red"],
-    sizes: ["S", "M", "L", "XL"],
-    rating: 4.5,
-    reviews: 128,
-    isNew: false,
-    isPopular: true,
-    dateAdded: "2024-01-15",
-    description:
-      "A timeless classic that never goes out of style. This premium baseball cap features a comfortable cotton blend fabric, adjustable strap, and structured crown for the perfect fit.",
-    features: [
-      "100% cotton blend fabric",
-      "Adjustable snapback closure",
-      "Pre-curved visor",
-      "Structured 6-panel crown",
-      "Breathable eyelets",
-      "One size fits most",
-    ],
-    specifications: {
-      Material: "Cotton Blend",
-      "Care Instructions": "Hand wash cold, air dry",
-      "Brim Length": "7cm",
-      "Crown Height": "11cm",
-      Weight: "85g",
-    },
-    shipping: {
-      standard: "5-7 business days",
-      express: "2-3 business days",
-      overnight: "Next business day",
-    },
-  },
-  {
-    id: 2,
-    name: "Luxury Fedora Hat",
-    price: 89.99,
-    image: "/images/hairs/8.jpg",
-    images: [
-      "/images/hairs/8.jpg",
-      "/images/hairs/8-alt1.jpg",
-      "/images/hairs/8-alt2.jpg",
-    ],
-    category: "hats",
-    colors: ["black", "brown", "gray"],
-    sizes: ["S", "M", "L"],
-    rating: 4.8,
-    reviews: 45,
-    isNew: true,
-    isPopular: false,
-    dateAdded: "2024-06-01",
-    description:
-      "Elevate your style with this sophisticated fedora hat. Crafted from premium wool felt with a classic center crease and pinched crown design.",
-    features: [
-      "Premium wool felt construction",
-      "Classic center crease crown",
-      "Grosgrain ribbon hatband",
-      "Unlined interior",
-      "Water resistant finish",
-      "Handcrafted details",
-    ],
-    specifications: {
-      Material: "100% Wool Felt",
-      "Care Instructions": "Spot clean only",
-      "Brim Width": "6cm",
-      "Crown Height": "12cm",
-      Weight: "120g",
-    },
-    shipping: {
-      standard: "5-7 business days",
-      express: "2-3 business days",
-      overnight: "Next business day",
-    },
-  },
-  // Add more products as needed...
-];
+// API service functions
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-// Mock reviews data
-const mockReviews = [
-  {
-    id: 1,
-    user: "Sarah M.",
-    rating: 5,
-    date: "2024-05-15",
-    title: "Perfect fit and style!",
-    comment:
-      "Love this cap! The quality is excellent and it fits perfectly. The color is exactly as shown in the photos.",
-    verified: true,
-    helpful: 12,
-  },
-  {
-    id: 2,
-    user: "Mike R.",
-    rating: 4,
-    date: "2024-05-10",
-    title: "Great quality",
-    comment:
-      "Well-made cap with good attention to detail. Comfortable to wear all day.",
-    verified: true,
-    helpful: 8,
-  },
-  {
-    id: 3,
-    user: "Jennifer L.",
-    rating: 5,
-    date: "2024-05-05",
-    title: "Highly recommended",
-    comment:
-      "Bought this for my husband and he absolutely loves it. Fast shipping too!",
-    verified: false,
-    helpful: 6,
-  },
-];
+export async function fetchProduct(id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/${id}/`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    throw error;
+  }
+}
 
 export default function ProductDetailPage() {
   const pathname = usePathname();
   const id = pathname.split("/").pop();
 
   const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState("description");
-  const [reviews, setReviews] = useState(mockReviews);
+  const [reviews, setReviews] = useState([]);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
+
+  // Extract YouTube video ID from URL
+  const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    const regExp =
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : null;
+  };
 
   // Load product data
   useEffect(() => {
-    if (id) {
-      const foundProduct = allProducts.find((p) => p.id === parseInt(id));
-      if (foundProduct) {
-        setProduct(foundProduct);
-        setSelectedColor(foundProduct.colors[0]);
-        setSelectedSize(foundProduct.sizes[0]);
+    const loadProduct = async () => {
+      if (id) {
+        try {
+          setLoading(true);
+          const response = await fetchProduct(id);
+          const productData = response.data;
 
-        // Get related products (same category, different products)
-        const related = allProducts
-          .filter(
-            (p) =>
-              p.category === foundProduct.category && p.id !== foundProduct.id
-          )
-          .slice(0, 4);
-        setRelatedProducts(related);
+          setProduct(productData);
+          setSelectedColor(productData.colors?.[0] || "");
+          setSelectedSize(productData.sizes?.[0] || "");
+
+          // You can add related products API call here
+          // const relatedResponse = await fetchRelatedProducts(productData.category);
+          // setRelatedProducts(relatedResponse.data);
+        } catch (error) {
+          console.error("Error loading product:", error);
+          // Handle error - maybe redirect to 404 page
+        } finally {
+          setLoading(false);
+        }
       }
-    }
+    };
+
+    loadProduct();
   }, [id]);
 
-  if (!product) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-purple-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading product details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Product Not Found
+          </h1>
+          <p className="text-gray-600 mb-8">
+            The product you're looking for doesn't exist.
+          </p>
+          <Link
+            href="/products"
+            className="bg-purple-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-purple-700 transition-colors"
+          >
+            Back to Products
+          </Link>
         </div>
       </div>
     );
@@ -184,7 +128,7 @@ export default function ProductDetailPage() {
           <svg
             key={star}
             className={`w-5 h-5 ${
-              star <= rating ? "text-yellow-400" : "text-gray-300"
+              star <= Math.floor(rating) ? "text-yellow-400" : "text-gray-300"
             }`}
             fill="currentColor"
             viewBox="0 0 20 20"
@@ -215,19 +159,23 @@ export default function ProductDetailPage() {
   };
 
   const ColorOption = ({ color, isSelected, onClick }) => {
-    const colorMap = {
-      black: "#000000",
-      navy: "#1a237e",
-      white: "#ffffff",
-      red: "#d32f2f",
-      brown: "#5d4037",
-      gray: "#616161",
-      multi: "linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1)",
-      pink: "#e91e63",
-      blue: "#2196f3",
-      gold: "#ffd700",
-      beige: "#f5f5dc",
-      blonde: "#faf0be",
+    const getColorStyle = (color) => {
+      const colorMap = {
+        red: "#ef4444",
+        blue: "#3b82f6",
+        green: "#10b981",
+        yellow: "#f59e0b",
+        purple: "#8b5cf6",
+        pink: "#ec4899",
+        orange: "#f97316",
+        black: "#000000",
+        white: "#ffffff",
+        gray: "#6b7280",
+        brown: "#92400e",
+        navy: "#1e3a8a",
+        beige: "#f5f5dc",
+      };
+      return colorMap[color.toLowerCase()] || "#6b7280";
     };
 
     return (
@@ -238,35 +186,60 @@ export default function ProductDetailPage() {
             ? "border-purple-600 ring-2 ring-purple-200"
             : "border-gray-300 hover:border-gray-400"
         }`}
-        style={{
-          background:
-            color === "multi" ? colorMap[color] : colorMap[color] || color,
-        }}
-        title={color}
+        style={{ backgroundColor: getColorStyle(color) }}
+        title={color.charAt(0).toUpperCase() + color.slice(1)}
       />
+    );
+  };
+
+  const VideoModal = ({ isOpen, onClose, videoUrl }) => {
+    const videoId = getYouTubeVideoId(videoUrl);
+
+    if (!isOpen || !videoId) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="flex justify-between items-center p-6 border-b">
+            <h3 className="text-xl font-bold">Product Video</h3>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <div className="aspect-video">
+            <iframe
+              width="100%"
+              height="100%"
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1`}
+              title="Product Video"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
     );
   };
 
   return (
     <>
-      <Head>
-        <title>{product.name} | Premium Head Wear</title>
-        <meta name="description" content={product.description} />
-        <meta
-          name="keywords"
-          content={`${product.category}, ${product.name}, head wear, fashion`}
-        />
-        <link
-          rel="canonical"
-          href={`https://yourdomain.com/products/${product.id}`}
-        />
-        <meta property="og:title" content={product.name} />
-        <meta property="og:description" content={product.description} />
-        <meta property="og:image" content={product.image} />
-        <meta property="og:type" content="product" />
-      </Head>
-
-      <main className="pt-28 min-h-screen bg-gray-50">
+      <main className="pt-[120px] min-h-screen bg-gray-50">
         {/* Breadcrumb */}
         <div className="bg-white border-b">
           <div className="container mx-auto px-4 py-4">
@@ -276,17 +249,17 @@ export default function ProductDetailPage() {
               </Link>
               <span className="text-gray-300">/</span>
               <Link
-                href="/products"
+                href="/shop"
                 className="text-gray-500 hover:text-purple-600"
               >
                 Products
               </Link>
               <span className="text-gray-300">/</span>
               <Link
-                href={`/products?category=${product.category}`}
-                className="text-gray-500 hover:text-purple-600 capitalize"
+                href={`/shop?category=${product.category}`}
+                className="text-gray-500 hover:text-purple-600"
               >
-                {product.category}
+                {product.category_name}
               </Link>
               <span className="text-gray-300">/</span>
               <span className="text-gray-900 font-medium">{product.name}</span>
@@ -302,9 +275,7 @@ export default function ProductDetailPage() {
               <div className="relative aspect-square bg-white rounded-2xl overflow-hidden shadow-lg">
                 <Image
                   src={
-                    product.images
-                      ? product.images[selectedImage]
-                      : product.image
+                    product.all_image_urls[selectedImage] || product.main_image
                   }
                   alt={product.name}
                   fill
@@ -313,22 +284,39 @@ export default function ProductDetailPage() {
                   }`}
                   onClick={() => setIsZoomed(!isZoomed)}
                 />
-                {product.isNew && (
+                {product.is_new && (
                   <span className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1 text-sm font-semibold rounded-full">
                     New Arrival
                   </span>
                 )}
-                {product.originalPrice && (
+                {product.original_price && (
                   <span className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 text-sm font-semibold rounded-full">
-                    Sale
+                    -{Math.round(product.discount_percentage)}% OFF
                   </span>
                 )}
               </div>
 
+              {/* Video Button */}
+              {product.video_url && (
+                <button
+                  onClick={() => setShowVideoModal(true)}
+                  className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-4 rounded-2xl font-semibold hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg flex items-center justify-center space-x-3"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <span>Watch Product Video</span>
+                </button>
+              )}
+
               {/* Thumbnail Images */}
-              {product.images && product.images.length > 1 && (
+              {product.all_image_urls && product.all_image_urls.length > 1 && (
                 <div className="flex space-x-3 overflow-x-auto">
-                  {product.images.map((img, index) => (
+                  {product.all_image_urls.map((img, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
@@ -356,32 +344,45 @@ export default function ProductDetailPage() {
               <div>
                 <div className="flex items-center space-x-2 mb-2">
                   <span className="text-sm text-purple-600 font-medium uppercase tracking-wide">
-                    {product.category}
+                    {product.category_name}
                   </span>
-                  {product.isPopular && (
+                  {product.is_popular && (
                     <span className="bg-purple-100 text-purple-700 px-2 py-1 text-xs font-semibold rounded-full">
                       Popular Choice
+                    </span>
+                  )}
+                  {product.is_trending && (
+                    <span className="bg-red-100 text-red-700 px-2 py-1 text-xs font-semibold rounded-full">
+                      Trending
+                    </span>
+                  )}
+                  {product.is_best_seller && (
+                    <span className="bg-yellow-100 text-yellow-700 px-2 py-1 text-xs font-semibold rounded-full">
+                      Best Seller
                     </span>
                   )}
                 </div>
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                   {product.name}
                 </h1>
-                <StarRating rating={product.rating} reviews={product.reviews} />
+                <StarRating
+                  rating={parseFloat(product.rating)}
+                  reviews={product.reviews_count}
+                />
               </div>
 
               {/* Price */}
               <div className="flex items-center space-x-3">
                 <span className="text-4xl font-bold text-gray-900">
-                  ${product.price}
+                  {formatPrice(product.price)}
                 </span>
-                {product.originalPrice && (
+                {product.original_price && (
                   <>
                     <span className="text-2xl text-gray-500 line-through">
-                      ${product.originalPrice}
+                      {formatPrice(product.original_price)}
                     </span>
                     <span className="bg-red-100 text-red-700 px-3 py-1 text-sm font-semibold rounded-full">
-                      Save ${(product.originalPrice - product.price).toFixed(2)}
+                      Save {formatPrice(product.original_price - product.price)}
                     </span>
                   </>
                 )}
@@ -393,46 +394,50 @@ export default function ProductDetailPage() {
               </p>
 
               {/* Color Selection */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">
-                  Color:{" "}
-                  <span className="font-normal capitalize">
-                    {selectedColor}
-                  </span>
-                </h3>
-                <div className="flex space-x-3">
-                  {product.colors.map((color) => (
-                    <ColorOption
-                      key={color}
-                      color={color}
-                      isSelected={selectedColor === color}
-                      onClick={() => setSelectedColor(color)}
-                    />
-                  ))}
+              {product.colors && product.colors.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">
+                    Color:{" "}
+                    <span className="font-normal capitalize">
+                      {selectedColor}
+                    </span>
+                  </h3>
+                  <div className="flex space-x-3">
+                    {product.colors.map((color) => (
+                      <ColorOption
+                        key={color}
+                        color={color}
+                        isSelected={selectedColor === color}
+                        onClick={() => setSelectedColor(color)}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Size Selection */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">
-                  Size: <span className="font-normal">{selectedSize}</span>
-                </h3>
-                <div className="flex space-x-3">
-                  {product.sizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`px-4 py-3 border-2 rounded-lg font-medium transition-all ${
-                        selectedSize === size
-                          ? "border-purple-600 bg-purple-50 text-purple-700"
-                          : "border-gray-300 hover:border-gray-400"
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+              {product.sizes && product.sizes.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">
+                    Size: <span className="font-normal">{selectedSize}</span>
+                  </h3>
+                  <div className="flex space-x-3">
+                    {product.sizes.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-4 py-3 border-2 rounded-lg font-medium transition-all ${
+                          selectedSize === size
+                            ? "border-purple-600 bg-purple-50 text-purple-700"
+                            : "border-gray-300 hover:border-gray-400"
+                        }`}
+                      >
+                        {size.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Quantity */}
               <div>
@@ -477,7 +482,9 @@ export default function ProductDetailPage() {
                       </svg>
                     </button>
                   </div>
-                  <span className="text-green-600 font-medium">In Stock</span>
+                  <span className="text-green-600 font-medium">
+                    {product.is_active ? "In Stock" : "Out of Stock"}
+                  </span>
                 </div>
               </div>
 
@@ -485,9 +492,10 @@ export default function ProductDetailPage() {
               <div className="space-y-4">
                 <button
                   onClick={handleAddToCart}
-                  className="w-full bg-black text-white py-4 rounded-full font-semibold text-lg hover:bg-gray-800 transition-colors duration-300"
+                  disabled={!product.is_active}
+                  className="w-full bg-black text-white py-4 rounded-full font-semibold text-lg hover:bg-gray-800 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  Add to Cart - ${(product.price * quantity).toFixed(2)}
+                  Add to Cart - {formatPrice(product.price * quantity)}
                 </button>
                 <div className="flex space-x-4">
                   <button className="flex-1 border-2 border-green-600 text-green-600 py-3 rounded-full font-semibold hover:bg-green-600 hover:text-white transition-colors duration-300">
@@ -505,19 +513,19 @@ export default function ProductDetailPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Standard Shipping:</span>
-                    <span>{product.shipping.standard}</span>
+                    <span>5-7 business days</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Express Shipping:</span>
-                    <span>{product.shipping.express}</span>
+                    <span>2-3 business days</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Overnight Shipping:</span>
-                    <span>{product.shipping.overnight}</span>
+                    <span>Next business day</span>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 mt-4">
-                  Free standard shipping on orders over $50
+                  Free standard shipping on orders over ₦50,000
                 </p>
               </div>
             </div>
@@ -532,7 +540,7 @@ export default function ProductDetailPage() {
                   { id: "description", name: "Description" },
                   { id: "features", name: "Features" },
                   { id: "specifications", name: "Specifications" },
-                  { id: "reviews", name: `Reviews (${product.reviews})` },
+                  { id: "reviews", name: `Reviews (${product.reviews_count})` },
                   { id: "shipping", name: "Shipping & Returns" },
                 ].map((tab) => (
                   <button
@@ -558,11 +566,11 @@ export default function ProductDetailPage() {
                     {product.description}
                   </p>
                   <p className="text-gray-600 leading-relaxed">
-                    This premium {product.category} is designed with both style
-                    and functionality in mind. Whether you're looking for
-                    everyday wear or something special for an occasion, this
-                    piece delivers exceptional quality and comfort that you'll
-                    love.
+                    This premium {product.category_name.toLowerCase()} is
+                    designed with both style and functionality in mind. Whether
+                    you're looking for everyday wear or something special for an
+                    occasion, this piece delivers exceptional quality and
+                    comfort that you'll love.
                   </p>
                 </div>
               )}
@@ -681,16 +689,16 @@ export default function ProductDetailPage() {
                       <h4 className="font-semibold mb-4">Shipping Options</h4>
                       <div className="space-y-3">
                         <div className="flex justify-between">
-                          <span>Standard Shipping (Free over $50):</span>
-                          <span>{product.shipping.standard}</span>
+                          <span>Standard Shipping (Free over ₦50,000):</span>
+                          <span>5-7 business days</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Express Shipping ($9.99):</span>
-                          <span>{product.shipping.express}</span>
+                          <span>Express Shipping (₦9,999):</span>
+                          <span>2-3 business days</span>
                         </div>
                         <div className="flex justify-between">
-                          <span>Overnight Shipping ($19.99):</span>
-                          <span>{product.shipping.overnight}</span>
+                          <span>Overnight Shipping (₦19,999):</span>
+                          <span>Next business day</span>
                         </div>
                       </div>
                     </div>
@@ -711,7 +719,7 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Related Products */}
+          {/* Related Products Section - You can populate this with API data */}
           {relatedProducts.length > 0 && (
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
@@ -726,7 +734,7 @@ export default function ProductDetailPage() {
                   >
                     <div className="relative aspect-square overflow-hidden">
                       <Image
-                        src={relatedProduct.image}
+                        src={relatedProduct.main_image}
                         alt={relatedProduct.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -737,16 +745,16 @@ export default function ProductDetailPage() {
                         {relatedProduct.name}
                       </h3>
                       <StarRating
-                        rating={relatedProduct.rating}
-                        reviews={relatedProduct.reviews}
+                        rating={parseFloat(relatedProduct.rating)}
+                        reviews={relatedProduct.reviews_count}
                       />
                       <div className="flex items-center space-x-2 mt-2">
                         <span className="text-xl font-bold text-gray-900">
-                          ${relatedProduct.price}
+                          {formatPrice(relatedProduct.price)}
                         </span>
-                        {relatedProduct.originalPrice && (
+                        {relatedProduct.original_price && (
                           <span className="text-sm text-gray-500 line-through">
-                            ${relatedProduct.originalPrice}
+                            {formatPrice(relatedProduct.original_price)}
                           </span>
                         )}
                       </div>
@@ -757,7 +765,34 @@ export default function ProductDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Video Modal */}
+        <VideoModal
+          isOpen={showVideoModal}
+          onClose={() => setShowVideoModal(false)}
+          videoUrl={product.video_url}
+        />
       </main>
     </>
   );
+}
+
+// For SSR, you can add this function to fetch product data on the server
+export async function getServerSideProps(context) {
+  const { id } = context.params;
+
+  try {
+    const response = await fetchProduct(id);
+
+    return {
+      props: {
+        initialProduct: response.data,
+      },
+    };
+  } catch (error) {
+    console.error("Error in getServerSideProps:", error);
+    return {
+      notFound: true,
+    };
+  }
 }

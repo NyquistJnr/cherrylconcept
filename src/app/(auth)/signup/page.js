@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "react-toastify";
 import {
   FiMail,
   FiLock,
@@ -32,6 +33,40 @@ export default function SignUpPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [wantsNewsletter, setWantsNewsletter] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
+
+  // Secure token storage utility
+  const storeTokensSecurely = (tokens, userId) => {
+    try {
+      // Store tokens in httpOnly cookies via API call (most secure for production)
+      fetch("/api/auth/set-tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          accessToken: tokens.access,
+          refreshToken: tokens.refresh,
+          userId: userId,
+        }),
+      });
+
+      // Store user ID in sessionStorage (cleared when tab closes)
+      sessionStorage.setItem("userId", userId);
+
+      // Store non-sensitive user data in localStorage for convenience
+      const userData = {
+        id: userId,
+        // Add other non-sensitive user data here if needed
+      };
+      localStorage.setItem("userData", JSON.stringify(userData));
+    } catch (error) {
+      console.error("Error storing tokens:", error);
+      // Fallback to localStorage if cookie storage fails
+      localStorage.setItem("accessToken", tokens.access);
+      localStorage.setItem("refreshToken", tokens.refresh);
+      localStorage.setItem("userId", userId);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -127,13 +162,145 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/register/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            email: formData.email,
+            phone_number: formData.phone,
+            password: formData.password,
+            confirm_password: formData.confirmPassword,
+          }),
+        }
+      );
 
-      // Mock successful signup
-      router.push("/login?message=Account created successfully");
+      const data = await response.json();
+
+      if (response.ok) {
+        // Registration successful
+        console.log("Registration successful:", data);
+
+        // Store tokens and user data securely
+        storeTokensSecurely(data.tokens, data.user.id);
+
+        // Show success toast
+        toast.success(
+          `Welcome to Cherryl concept, ${data.user.first_name}! Your account has been created successfully.`,
+          {
+            position: "top-right",
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          }
+        );
+
+        // Redirect to account page or login page
+        router.push("/account");
+      } else {
+        // Handle API errors
+        if (data.errors) {
+          // Handle structured errors
+          if (data.errors.non_field_errors) {
+            const errorMessage = data.errors.non_field_errors[0];
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+          } else if (data.errors.email) {
+            const errorMessage = Array.isArray(data.errors.email)
+              ? data.errors.email[0]
+              : data.errors.email;
+            setErrors({ email: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.password) {
+            const errorMessage = Array.isArray(data.errors.password)
+              ? data.errors.password[0]
+              : data.errors.password;
+            setErrors({ password: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.phone_number) {
+            const errorMessage = Array.isArray(data.errors.phone_number)
+              ? data.errors.phone_number[0]
+              : data.errors.phone_number;
+            setErrors({ phone: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.first_name) {
+            const errorMessage = Array.isArray(data.errors.first_name)
+              ? data.errors.first_name[0]
+              : data.errors.first_name;
+            setErrors({ firstName: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else if (data.errors.last_name) {
+            const errorMessage = Array.isArray(data.errors.last_name)
+              ? data.errors.last_name[0]
+              : data.errors.last_name;
+            setErrors({ lastName: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          } else {
+            const errorMessage =
+              "Registration failed. Please check your information and try again.";
+            setErrors({ general: errorMessage });
+            toast.error(errorMessage, {
+              position: "top-right",
+              autoClose: 5000,
+            });
+          }
+        } else if (data.message) {
+          setErrors({ general: data.message });
+          toast.error(data.message, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        } else {
+          const errorMessage = "Registration failed. Please try again.";
+          setErrors({ general: errorMessage });
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+          });
+        }
+      }
     } catch (error) {
-      setErrors({ general: "Something went wrong. Please try again." });
+      console.error("Registration error:", error);
+      const errorMessage =
+        "Network error. Please check your connection and try again.";
+      setErrors({ general: errorMessage });
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     } finally {
       setIsLoading(false);
     }
