@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCart } from "@/contexts/CartContext";
 
 // API service functions
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -32,6 +33,9 @@ export default function ProductDetailPage() {
   const pathname = usePathname();
   const id = pathname.split("/").pop();
 
+  // Cart context
+  const { addToCart, isLoading: cartLoading } = useCart();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -43,6 +47,7 @@ export default function ProductDetailPage() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [isZoomed, setIsZoomed] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-NG", {
@@ -111,10 +116,10 @@ export default function ProductDetailPage() {
             The product you're looking for doesn't exist.
           </p>
           <Link
-            href="/products"
+            href="/shop"
             className="bg-purple-600 text-white px-6 py-3 rounded-full font-semibold hover:bg-purple-700 transition-colors"
           >
-            Back to Products
+            Back to Shop
           </Link>
         </div>
       </div>
@@ -145,17 +150,29 @@ export default function ProductDetailPage() {
     </div>
   );
 
-  const handleAddToCart = () => {
-    // Add to cart logic here
-    console.log("Adding to cart:", {
-      productId: product.id,
-      color: selectedColor,
-      size: selectedSize,
-      quantity: quantity,
-    });
+  const handleAddToCart = async () => {
+    try {
+      setAddingToCart(true);
 
-    // Show success message (you can implement a toast notification)
-    alert("Added to cart successfully!");
+      // Validate selections
+      if (product.colors && product.colors.length > 0 && !selectedColor) {
+        alert("Please select a color");
+        return;
+      }
+
+      if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+        alert("Please select a size");
+        return;
+      }
+
+      // Add to cart using context
+      await addToCart(product, selectedColor, selectedSize, quantity);
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Error adding item to cart. Please try again.");
+    } finally {
+      setAddingToCart(false);
+    }
   };
 
   const ColorOption = ({ color, isSelected, onClick }) => {
@@ -492,10 +509,34 @@ export default function ProductDetailPage() {
               <div className="space-y-4">
                 <button
                   onClick={handleAddToCart}
-                  disabled={!product.is_active}
-                  className="w-full bg-black text-white py-4 rounded-full font-semibold text-lg hover:bg-gray-800 transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  disabled={!product.is_active || addingToCart || cartLoading}
+                  className="w-full bg-black text-white py-4 rounded-full font-semibold text-lg hover:bg-gray-800 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  Add to Cart - {formatPrice(product.price * quantity)}
+                  {addingToCart || cartLoading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <span>
+                      Add to Cart - {formatPrice(product.price * quantity)}
+                    </span>
+                  )}
                 </button>
                 <div className="flex space-x-4">
                   <button className="flex-1 border-2 border-green-600 text-green-600 py-3 rounded-full font-semibold hover:bg-green-600 hover:text-white transition-colors duration-300">
@@ -579,7 +620,7 @@ export default function ProductDetailPage() {
                 <div>
                   <h3 className="text-xl font-semibold mb-6">Key Features</h3>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {product.features.map((feature, index) => (
+                    {(product.features || []).map((feature, index) => (
                       <li key={index} className="flex items-center space-x-3">
                         <svg
                           className="w-5 h-5 text-green-500 flex-shrink-0"
@@ -607,7 +648,7 @@ export default function ProductDetailPage() {
                     Product Specifications
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Object.entries(product.specifications).map(
+                    {Object.entries(product.specifications || {}).map(
                       ([key, value]) => (
                         <div
                           key={key}
@@ -775,24 +816,4 @@ export default function ProductDetailPage() {
       </main>
     </>
   );
-}
-
-// For SSR, you can add this function to fetch product data on the server
-export async function getServerSideProps(context) {
-  const { id } = context.params;
-
-  try {
-    const response = await fetchProduct(id);
-
-    return {
-      props: {
-        initialProduct: response.data,
-      },
-    };
-  } catch (error) {
-    console.error("Error in getServerSideProps:", error);
-    return {
-      notFound: true,
-    };
-  }
 }

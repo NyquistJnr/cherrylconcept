@@ -12,13 +12,17 @@ import {
   FiX,
   FiChevronDown,
 } from "react-icons/fi";
+import { useCart } from "@/contexts/CartContext";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const pathname = usePathname();
+
+  // Get cart data from context
+  const { getCartTotals } = useCart();
+  const { itemCount } = getCartTotals();
 
   // Memoize navigation items to prevent unnecessary re-renders
   const navigationItems = useMemo(
@@ -79,7 +83,7 @@ const Header = () => {
         itemType="https://schema.org/Offer"
       >
         <p itemProp="description">
-          Free shipping on orders over $50 | 30-day returns |{" "}
+          Free shipping on orders over ₦50,000 | 30-day returns |{" "}
           <Link href="/sale" className="underline font-semibold" itemProp="url">
             Shop Sale →
           </Link>
@@ -153,21 +157,28 @@ const Header = () => {
               <FiUser className="w-6 h-6" />
             </Link>
 
-            {/* Shopping Cart */}
+            {/* Shopping Cart with Real-time Count */}
             <Link
               href="/cart"
-              className={`relative p-2 rounded-full transition-colors duration-300 ${textColor} ${hoverBg}`}
-              aria-label="Shopping Cart"
+              className={`relative p-2 rounded-full transition-all duration-300 ${textColor} ${hoverBg}`}
+              aria-label={`Shopping Cart with ${itemCount} items`}
             >
               <FiShoppingCart className="w-6 h-6" />
-              {cartCount > 0 && (
+              {itemCount > 0 && (
                 <span
-                  className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+                  className="absolute -top-1 -right-1 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium animate-pulse"
                   aria-live="polite"
+                  key={itemCount} // Force re-render for animation
                 >
-                  {cartCount}
+                  {itemCount > 99 ? "99+" : itemCount}
                 </span>
               )}
+
+              {/* Cart Icon Animation on Add */}
+              <div
+                className="absolute inset-0 rounded-full bg-purple-600 opacity-0 animate-ping pointer-events-none"
+                key={`ping-${itemCount}`}
+              />
             </Link>
 
             {/* Mobile Menu Button */}
@@ -233,6 +244,20 @@ const Header = () => {
                   </Link>
                 </div>
               ))}
+
+              {/* Mobile Cart Link */}
+              <Link
+                href="/cart"
+                className="flex items-center justify-between py-2 font-medium text-gray-900 hover:text-purple-600 border-t pt-4"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span>Shopping Cart</span>
+                {itemCount > 0 && (
+                  <span className="bg-purple-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-medium">
+                    {itemCount > 99 ? "99+" : itemCount}
+                  </span>
+                )}
+              </Link>
             </nav>
           </div>
         </div>

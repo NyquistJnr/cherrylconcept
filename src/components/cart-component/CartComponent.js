@@ -4,59 +4,20 @@ import { useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
-
-// Mock cart data
-const initialCartItems = [
-  {
-    id: 1,
-    name: "Classic Baseball Cap",
-    price: 29.99,
-    originalPrice: 39.99,
-    image: "/images/hairs/7.jpg",
-    color: "Black",
-    size: "M",
-    quantity: 2,
-  },
-  {
-    id: 2,
-    name: "Luxury Fedora Hat",
-    price: 89.99,
-    image: "/images/hairs/8.jpg",
-    color: "Brown",
-    size: "L",
-    quantity: 1,
-  },
-  {
-    id: 3,
-    name: "Silk Headband Set",
-    price: 24.99,
-    image: "/images/hairs/21.jpg",
-    color: "Pink",
-    size: "One Size",
-    quantity: 3,
-  },
-];
+import { useCart } from "@/contexts/CartContext";
 
 export default function CartComponent() {
-  const [cartItems, setCartItems] = useState(initialCartItems);
   const [promoCode, setPromoCode] = useState("");
   const [discount, setDiscount] = useState(0);
 
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity === 0) {
-      removeItem(id);
-      return;
-    }
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-  };
-
-  const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-  };
+  // Get cart data and functions from context
+  const {
+    cartItems,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    getCartTotals,
+  } = useCart();
 
   const applyPromoCode = () => {
     // Simple promo code logic
@@ -69,21 +30,21 @@ export default function CartComponent() {
     }
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const { subtotal, itemCount, shipping, tax } = getCartTotals();
   const discountAmount = subtotal * discount;
-  const shipping = subtotal > 50 ? 0 : 9.99;
-  const tax = (subtotal - discountAmount) * 0.08;
   const total = subtotal - discountAmount + shipping + tax;
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency: "NGN",
+      minimumFractionDigits: 0,
+    }).format(price);
+  };
 
   if (cartItems.length === 0) {
     return (
       <>
-        <Head>
-          <title>Shopping Cart | HeadWear</title>
-        </Head>
         <main className="pt-28 min-h-screen bg-gray-50">
           <div className="container mx-auto px-4 py-16 text-center">
             <div className="max-w-md mx-auto">
@@ -122,23 +83,34 @@ export default function CartComponent() {
   return (
     <>
       <Head>
-        <title>Shopping Cart ({cartItems.length} items) | HeadWear</title>
+        <title>Shopping Cart ({itemCount} items) | HeadWear</title>
         <meta
           name="description"
-          content="Review your HeadWear items and proceed to checkout. Free shipping on orders over $50."
+          content="Review your HeadWear items and proceed to checkout. Free shipping on orders over ₦50,000."
         />
       </Head>
 
       <main className="pt-28 min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              Shopping Cart
-            </h1>
-            <p className="text-gray-600">
-              {cartItems.length} item{cartItems.length !== 1 ? "s" : ""} in your
-              cart
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+                  Shopping Cart
+                </h1>
+                <p className="text-gray-600">
+                  {itemCount} item{itemCount !== 1 ? "s" : ""} in your cart
+                </p>
+              </div>
+              {cartItems.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="text-red-600 hover:text-red-700 font-medium underline"
+                >
+                  Clear Cart
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -146,7 +118,7 @@ export default function CartComponent() {
             <div className="lg:col-span-2 space-y-4">
               {cartItems.map((item) => (
                 <div
-                  key={`${item.id}-${item.color}-${item.size}`}
+                  key={item.id}
                   className="bg-white rounded-2xl p-6 shadow-sm"
                 >
                   <div className="flex flex-col sm:flex-row gap-4">
@@ -164,16 +136,22 @@ export default function CartComponent() {
                     <div className="flex-1 space-y-3">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-semibold text-lg text-gray-900">
-                            {item.name}
-                          </h3>
+                          <Link
+                            href={`/shop/${item.productId}`}
+                            className="hover:text-purple-600 transition-colors"
+                          >
+                            <h3 className="font-semibold text-lg text-gray-900">
+                              {item.name}
+                            </h3>
+                          </Link>
                           <div className="text-sm text-gray-500 space-y-1">
-                            <p>Color: {item.color}</p>
-                            <p>Size: {item.size}</p>
+                            {item.category && <p>Category: {item.category}</p>}
+                            {item.color && <p>Color: {item.color}</p>}
+                            {item.size && <p>Size: {item.size}</p>}
                           </div>
                         </div>
                         <button
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeFromCart(item.id)}
                           className="text-gray-400 hover:text-red-500 transition-colors p-1"
                           aria-label="Remove item"
                         >
@@ -197,13 +175,14 @@ export default function CartComponent() {
                         {/* Price */}
                         <div className="flex items-center space-x-2">
                           <span className="text-xl font-bold text-gray-900">
-                            ${item.price}
+                            {formatPrice(item.price)}
                           </span>
-                          {item.originalPrice && (
-                            <span className="text-sm text-gray-500 line-through">
-                              ${item.originalPrice}
-                            </span>
-                          )}
+                          {item.originalPrice &&
+                            item.originalPrice > item.price && (
+                              <span className="text-sm text-gray-500 line-through">
+                                {formatPrice(item.originalPrice)}
+                              </span>
+                            )}
                         </div>
 
                         {/* Quantity Controls */}
@@ -252,6 +231,13 @@ export default function CartComponent() {
                             </svg>
                           </button>
                         </div>
+                      </div>
+
+                      {/* Item Total */}
+                      <div className="text-right">
+                        <span className="text-lg font-semibold text-gray-900">
+                          Total: {formatPrice(item.price * item.quantity)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -319,29 +305,33 @@ export default function CartComponent() {
                 {/* Price Breakdown */}
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-gray-600">
-                    <span>Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>Subtotal ({itemCount} items)</span>
+                    <span>{formatPrice(subtotal)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Discount ({(discount * 100).toFixed(0)}%)</span>
-                      <span>-${discountAmount.toFixed(2)}</span>
+                      <span>-{formatPrice(discountAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
                     <span>
-                      {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
+                      {shipping === 0 ? (
+                        <span className="text-green-600 font-medium">FREE</span>
+                      ) : (
+                        formatPrice(shipping)
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Tax</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>Tax (8%)</span>
+                    <span>{formatPrice(tax)}</span>
                   </div>
                   <div className="border-t pt-3">
                     <div className="flex justify-between text-lg font-bold text-gray-900">
                       <span>Total</span>
-                      <span>${total.toFixed(2)}</span>
+                      <span>{formatPrice(total)}</span>
                     </div>
                   </div>
                 </div>
@@ -350,13 +340,14 @@ export default function CartComponent() {
                 {shipping > 0 && (
                   <div className="mb-6 p-4 bg-yellow-50 rounded-lg">
                     <p className="text-sm text-yellow-800 mb-2">
-                      Add ${(50 - subtotal).toFixed(2)} more for free shipping!
+                      Add {formatPrice(50000 - subtotal)} more for free
+                      shipping!
                     </p>
                     <div className="w-full bg-yellow-200 rounded-full h-2">
                       <div
                         className="bg-yellow-500 h-2 rounded-full transition-all duration-300"
                         style={{
-                          width: `${Math.min((subtotal / 50) * 100, 100)}%`,
+                          width: `${Math.min((subtotal / 50000) * 100, 100)}%`,
                         }}
                       ></div>
                     </div>
@@ -367,6 +358,22 @@ export default function CartComponent() {
                 <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 mb-4">
                   Proceed to Checkout
                 </button>
+
+                {/* Quick Actions */}
+                <div className="space-y-3 mb-6">
+                  <button
+                    onClick={clearCart}
+                    className="w-full border border-red-300 text-red-600 py-2 rounded-lg font-medium hover:bg-red-50 transition-colors"
+                  >
+                    Clear Cart
+                  </button>
+                  <Link
+                    href="/shop"
+                    className="block w-full text-center border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Continue Shopping
+                  </Link>
+                </div>
 
                 {/* Payment Methods */}
                 <div className="text-center">
@@ -402,6 +409,47 @@ export default function CartComponent() {
                     <span className="text-sm font-medium">Secure Checkout</span>
                   </div>
                 </div>
+
+                {/* Cart Summary Stats */}
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-semibold mb-2">Cart Summary</h4>
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <div className="flex justify-between">
+                      <span>Items in cart:</span>
+                      <span>{itemCount}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Unique products:</span>
+                      <span>{cartItems.length}</span>
+                    </div>
+                    {discount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>You're saving:</span>
+                        <span>{formatPrice(discountAmount)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Recently Viewed or Recommended Products */}
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">
+              You might also like
+            </h2>
+            <div className="bg-white rounded-2xl p-6">
+              <p className="text-gray-600 text-center">
+                Recommended products will appear here based on your cart items.
+              </p>
+              <div className="text-center mt-4">
+                <Link
+                  href="/shop"
+                  className="inline-block bg-purple-600 text-white px-6 py-2 rounded-full font-medium hover:bg-purple-700 transition-colors"
+                >
+                  Browse All Products
+                </Link>
               </div>
             </div>
           </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useCart } from "@/contexts/CartContext";
 
 // API service functions
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -102,6 +103,9 @@ export default function ProductListingPage({
   const [showFilters, setShowFilters] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
+  // Cart context
+  const { addToCart } = useCart();
+
   // Fetch products when filters change
   useEffect(() => {
     const fetchFilteredProducts = async () => {
@@ -180,6 +184,21 @@ export default function ProductListingPage({
     </div>
   );
 
+  const handleAddToCart = async (product, e) => {
+    e.stopPropagation(); // Prevent any parent click handlers
+
+    try {
+      await addToCart(
+        product,
+        product.colors?.[0] || "", // Default to first color
+        product.sizes?.[0] || "", // Default to first size
+        1 // Default quantity
+      );
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
+  };
+
   const ProductCard = ({ product, isListView = false }) => {
     const discountPercentage = product.discount_percentage || 0;
 
@@ -219,12 +238,14 @@ export default function ProductListingPage({
               -{Math.round(discountPercentage)}%
             </span>
           )}
-          <Image
-            src={product.main_image}
-            alt={product.name}
-            fill
-            className="object-cover group-hover:scale-110 transition-transform duration-500"
-          />
+          <Link href={`/shop/${product.id}`}>
+            <Image
+              src={product.main_image}
+              alt={product.name}
+              fill
+              className="object-cover group-hover:scale-110 transition-transform duration-500"
+            />
+          </Link>
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
           <button
             onClick={() => setQuickViewProduct(product)}
@@ -242,12 +263,14 @@ export default function ProductListingPage({
           }`}
         >
           <div>
-            <span className="text-sm text-purple-600 font-medium">
-              {product.category_name}
-            </span>
-            <h3 className="font-semibold text-lg mb-2 text-gray-900 group-hover:text-purple-600 transition-colors">
-              {product.name}
-            </h3>
+            <Link href={`/shop/${product.id}`}>
+              <span className="text-sm text-purple-600 font-medium">
+                {product.category_name}
+              </span>
+              <h3 className="font-semibold text-lg mb-2 text-gray-900 group-hover:text-purple-600 transition-colors">
+                {product.name}
+              </h3>
+            </Link>
             <StarRating
               rating={parseFloat(product.rating)}
               reviews={product.reviews_count}
@@ -271,7 +294,10 @@ export default function ProductListingPage({
               </div>
             )}
           </div>
-          <button className="w-full bg-black text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors duration-300">
+          <button
+            onClick={(e) => handleAddToCart(product, e)}
+            className="w-full bg-black text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors duration-300"
+          >
             Add to Cart
           </button>
         </div>
@@ -280,6 +306,18 @@ export default function ProductListingPage({
   };
 
   const QuickViewModal = ({ product, onClose }) => {
+    const [selectedColor, setSelectedColor] = useState("");
+    const [selectedSize, setSelectedSize] = useState("");
+    const [quantity, setQuantity] = useState(1);
+
+    useEffect(() => {
+      if (product) {
+        setSelectedColor(product.colors?.[0] || "");
+        setSelectedSize(product.sizes?.[0] || "");
+        setQuantity(1);
+      }
+    }, [product]);
+
     if (!product) return null;
 
     const getColorStyle = (color) => {
@@ -299,6 +337,15 @@ export default function ProductListingPage({
         beige: "#f5f5dc",
       };
       return colorMap[color.toLowerCase()] || "#6b7280";
+    };
+
+    const handleQuickAddToCart = async () => {
+      try {
+        await addToCart(product, selectedColor, selectedSize, quantity);
+        onClose(); // Close modal after adding to cart
+      } catch (error) {
+        console.error("Error adding to cart:", error);
+      }
     };
 
     return (
@@ -387,7 +434,12 @@ export default function ProductListingPage({
                       {product.colors.map((color, index) => (
                         <button
                           key={index}
-                          className="w-8 h-8 rounded-full border-2 border-gray-300 hover:border-purple-500 transition-colors shadow-sm"
+                          onClick={() => setSelectedColor(color)}
+                          className={`w-8 h-8 rounded-full border-2 transition-colors shadow-sm ${
+                            selectedColor === color
+                              ? "border-purple-500 ring-2 ring-purple-200"
+                              : "border-gray-300 hover:border-purple-500"
+                          }`}
                           style={{ backgroundColor: getColorStyle(color) }}
                           title={color.charAt(0).toUpperCase() + color.slice(1)}
                         />
@@ -414,7 +466,12 @@ export default function ProductListingPage({
                       {product.sizes.map((size, index) => (
                         <button
                           key={index}
-                          className="px-4 py-2 border border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors font-medium"
+                          onClick={() => setSelectedSize(size)}
+                          className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                            selectedSize === size
+                              ? "border-purple-500 bg-purple-50 text-purple-700"
+                              : "border-gray-300 hover:border-purple-500 hover:bg-purple-50"
+                          }`}
                         >
                           {size.toUpperCase()}
                         </button>
@@ -422,10 +479,59 @@ export default function ProductListingPage({
                     </div>
                   </div>
                 )}
+
+                {/* Quantity */}
+                <div>
+                  <h4 className="font-semibold mb-2">Quantity:</h4>
+                  <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M20 12H4"
+                        />
+                      </svg>
+                    </button>
+                    <span className="font-medium w-8 text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => setQuantity(quantity + 1)}
+                      className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="flex space-x-4 mt-8">
-                <button className="flex-1 bg-black text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors">
+                <button
+                  onClick={handleQuickAddToCart}
+                  className="flex-1 bg-black text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors"
+                >
                   Add to Cart
                 </button>
                 <Link
@@ -508,7 +614,7 @@ export default function ProductListingPage({
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <span>All Product</span>
+                        <span>All Products</span>
                         <span className="text-sm text-gray-500">
                           ({totalCount})
                         </span>
