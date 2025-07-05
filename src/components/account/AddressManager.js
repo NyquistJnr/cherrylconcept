@@ -1,49 +1,67 @@
 "use client";
 
-import { useState } from "react";
-import { FiMapPin, FiEdit2, FiTrash2, FiPlus, FiCheck } from "react-icons/fi";
-
-// Mock addresses data - replace with API call
-const mockAddressesData = [
-  {
-    id: 1,
-    type: "Home",
-    name: "John Doe",
-    street: "123 Fashion Avenue",
-    city: "New York",
-    state: "NY",
-    zip: "10001",
-    country: "United States",
-    isDefault: true,
-  },
-  {
-    id: 2,
-    type: "Work",
-    name: "John Doe",
-    street: "456 Business Blvd",
-    city: "New York",
-    state: "NY",
-    zip: "10002",
-    country: "United States",
-    isDefault: false,
-  },
-];
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "react-toastify";
+import {
+  FiMapPin,
+  FiEdit2,
+  FiTrash2,
+  FiPlus,
+  FiCheck,
+  FiRefreshCw,
+} from "react-icons/fi";
+import LoadingSpinner from "../generic/LoadingSpinner";
 
 export default function AddressManager() {
-  const [addresses, setAddresses] = useState(mockAddressesData);
+  const { authenticatedFetch } = useAuth();
+  const [addresses, setAddresses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
-    type: "Home",
-    name: "",
-    street: "",
+    label: "Home",
+    first_name: "",
+    last_name: "",
+    phone_number: "",
+    address_line1: "",
+    address_line2: "",
     city: "",
     state: "",
-    zip: "",
-    country: "United States",
+    postal_code: "",
+    country: "USA",
   });
+
+  useEffect(() => {
+    loadAddresses();
+  }, []);
+
+  const loadAddresses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await authenticatedFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/shipping-addresses/`
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setAddresses(result.data || []);
+      } else {
+        throw new Error("Failed to load addresses");
+      }
+    } catch (error) {
+      console.error("Error loading addresses:", error);
+      setError("Failed to load addresses. Please try again.");
+      toast.error("Failed to load addresses");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -54,75 +72,139 @@ export default function AddressManager() {
 
   const resetForm = () => {
     setFormData({
-      type: "Home",
-      name: "",
-      street: "",
+      label: "Home",
+      first_name: "",
+      last_name: "",
+      phone_number: "",
+      address_line1: "",
+      address_line2: "",
       city: "",
       state: "",
-      zip: "",
-      country: "United States",
+      postal_code: "",
+      country: "USA",
     });
     setEditingAddress(null);
     setShowAddForm(false);
   };
 
+  const validateForm = () => {
+    const requiredFields = [
+      "first_name",
+      "last_name",
+      "address_line1",
+      "city",
+      "state",
+      "postal_code",
+    ];
+    const missingFields = requiredFields.filter(
+      (field) => !formData[field].trim()
+    );
+
+    if (missingFields.length > 0) {
+      toast.error("Please fill in all required fields");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleAddAddress = async () => {
+    if (!validateForm()) return;
+
     try {
-      setLoading(true);
-      // Here you would make an API call to add address
-      // await authenticatedFetch('/api/addresses', {
-      //   method: 'POST',
-      //   body: JSON.stringify(formData)
-      // });
+      setFormLoading(true);
 
-      const newAddress = {
-        id: Date.now(),
-        ...formData,
-        isDefault: addresses.length === 0,
-      };
+      const response = await authenticatedFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/shipping-addresses/`,
+        {
+          method: "POST",
+          body: JSON.stringify(formData),
+        }
+      );
 
-      setAddresses((prev) => [...prev, newAddress]);
-      resetForm();
+      if (response.ok) {
+        const result = await response.json();
+        toast.success("Address added successfully!");
+        await loadAddresses(); // Reload to get updated data
+        resetForm();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to add address");
+      }
     } catch (error) {
       console.error("Error adding address:", error);
+      toast.error("Network error. Please try again.");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleEditAddress = async (address) => {
+    try {
+      setLoading(true);
+
+      // Fetch the full address details
+      const response = await authenticatedFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/shipping-addresses/${address.id}/`
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        const addressData = result.data;
+
+        setFormData({
+          label: addressData.label || "Home",
+          first_name: addressData.first_name || "",
+          last_name: addressData.last_name || "",
+          phone_number: addressData.phone_number || "",
+          address_line1: addressData.address_line1 || "",
+          address_line2: addressData.address_line2 || "",
+          city: addressData.city || "",
+          state: addressData.state || "",
+          postal_code: addressData.postal_code || "",
+          country: addressData.country || "USA",
+        });
+
+        setEditingAddress(address.id);
+        setShowAddForm(true);
+      } else {
+        toast.error("Failed to load address details");
+      }
+    } catch (error) {
+      console.error("Error loading address:", error);
+      toast.error("Failed to load address details");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditAddress = (address) => {
-    setFormData({
-      type: address.type,
-      name: address.name,
-      street: address.street,
-      city: address.city,
-      state: address.state,
-      zip: address.zip,
-      country: address.country,
-    });
-    setEditingAddress(address.id);
-    setShowAddForm(true);
-  };
-
   const handleUpdateAddress = async () => {
-    try {
-      setLoading(true);
-      // Here you would make an API call to update address
-      // await authenticatedFetch(`/api/addresses/${editingAddress}`, {
-      //   method: 'PUT',
-      //   body: JSON.stringify(formData)
-      // });
+    if (!validateForm()) return;
 
-      setAddresses((prev) =>
-        prev.map((addr) =>
-          addr.id === editingAddress ? { ...addr, ...formData } : addr
-        )
+    try {
+      setFormLoading(true);
+
+      const response = await authenticatedFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/shipping-addresses/${editingAddress}/`,
+        {
+          method: "PUT",
+          body: JSON.stringify(formData),
+        }
       );
-      resetForm();
+
+      if (response.ok) {
+        toast.success("Address updated successfully!");
+        await loadAddresses();
+        resetForm();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to update address");
+      }
     } catch (error) {
       console.error("Error updating address:", error);
+      toast.error("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -130,58 +212,107 @@ export default function AddressManager() {
     if (!confirm("Are you sure you want to delete this address?")) return;
 
     try {
-      setLoading(true);
-      // Here you would make an API call to delete address
-      // await authenticatedFetch(`/api/addresses/${addressId}`, {
-      //   method: 'DELETE'
-      // });
+      setFormLoading(true);
 
-      setAddresses((prev) => prev.filter((addr) => addr.id !== addressId));
+      const response = await authenticatedFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/shipping-addresses/${addressId}/`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.ok) {
+        toast.success("Address deleted successfully!");
+        await loadAddresses();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to delete address");
+      }
     } catch (error) {
       console.error("Error deleting address:", error);
+      toast.error("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
   const handleSetDefault = async (addressId) => {
     try {
-      setLoading(true);
-      // Here you would make an API call to set default address
-      // await authenticatedFetch(`/api/addresses/${addressId}/set-default`, {
-      //   method: 'POST'
-      // });
+      setFormLoading(true);
 
-      setAddresses((prev) =>
-        prev.map((addr) => ({
-          ...addr,
-          isDefault: addr.id === addressId,
-        }))
+      const response = await authenticatedFetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/orders/shipping-addresses/${addressId}/set-default/`,
+        {
+          method: "POST",
+        }
       );
+
+      if (response.ok) {
+        toast.success("Default address updated successfully!");
+        await loadAddresses();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.message || "Failed to set default address");
+      }
     } catch (error) {
       console.error("Error setting default address:", error);
+      toast.error("Network error. Please try again.");
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  if (loading && addresses.length === 0) {
+    return <LoadingSpinner message="Loading your addresses..." />;
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-sm p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Shipping Addresses
           </h1>
-          <p className="text-gray-600 mt-1">Manage your delivery addresses</p>
+          <p className="text-gray-600 mt-1">
+            Manage your delivery addresses ({addresses.length} saved)
+          </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
-        >
-          <FiPlus className="w-4 h-4" />
-          <span>Add New Address</span>
-        </button>
+        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
+          <button
+            onClick={loadAddresses}
+            disabled={loading}
+            className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Refresh addresses"
+          >
+            <FiRefreshCw
+              className={`w-5 h-5 text-gray-600 ${
+                loading ? "animate-spin" : ""
+              }`}
+            />
+          </button>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+          >
+            <FiPlus className="w-4 h-4" />
+            <span>Add Address</span>
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
 
       {/* Add/Edit Address Form */}
       {showAddForm && (
@@ -193,12 +324,13 @@ export default function AddressManager() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Address Type
+                Address Label *
               </label>
               <select
-                value={formData.type}
-                onChange={(e) => handleInputChange("type", e.target.value)}
+                value={formData.label}
+                onChange={(e) => handleInputChange("label", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={formLoading}
               >
                 <option value="Home">Home</option>
                 <option value="Work">Work</option>
@@ -208,81 +340,145 @@ export default function AddressManager() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                Phone Number
               </label>
               <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
+                type="tel"
+                value={formData.phone_number}
+                onChange={(e) =>
+                  handleInputChange("phone_number", e.target.value)
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter full name"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Street Address
-              </label>
-              <input
-                type="text"
-                value={formData.street}
-                onChange={(e) => handleInputChange("street", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter street address"
+                placeholder="+1234567890"
+                disabled={formLoading}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                City
+                First Name *
+              </label>
+              <input
+                type="text"
+                value={formData.first_name}
+                onChange={(e) =>
+                  handleInputChange("first_name", e.target.value)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="John"
+                disabled={formLoading}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Last Name *
+              </label>
+              <input
+                type="text"
+                value={formData.last_name}
+                onChange={(e) => handleInputChange("last_name", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Doe"
+                disabled={formLoading}
+                required
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address Line 1 *
+              </label>
+              <input
+                type="text"
+                value={formData.address_line1}
+                onChange={(e) =>
+                  handleInputChange("address_line1", e.target.value)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="123 Main Street"
+                disabled={formLoading}
+                required
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Address Line 2
+              </label>
+              <input
+                type="text"
+                value={formData.address_line2}
+                onChange={(e) =>
+                  handleInputChange("address_line2", e.target.value)
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Apt 4B, Unit 5, etc."
+                disabled={formLoading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                City *
               </label>
               <input
                 type="text"
                 value={formData.city}
                 onChange={(e) => handleInputChange("city", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter city"
+                placeholder="New York"
+                disabled={formLoading}
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                State/Province
+                State/Province *
               </label>
               <input
                 type="text"
                 value={formData.state}
                 onChange={(e) => handleInputChange("state", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter state/province"
+                placeholder="NY"
+                disabled={formLoading}
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                ZIP/Postal Code
+                Postal Code *
               </label>
               <input
                 type="text"
-                value={formData.zip}
-                onChange={(e) => handleInputChange("zip", e.target.value)}
+                value={formData.postal_code}
+                onChange={(e) =>
+                  handleInputChange("postal_code", e.target.value)
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter ZIP/postal code"
+                placeholder="10001"
+                disabled={formLoading}
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Country
+                Country *
               </label>
               <select
                 value={formData.country}
                 onChange={(e) => handleInputChange("country", e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={formLoading}
               >
-                <option value="United States">United States</option>
+                <option value="USA">United States</option>
                 <option value="Canada">Canada</option>
-                <option value="United Kingdom">United Kingdom</option>
+                <option value="UK">United Kingdom</option>
                 <option value="Australia">Australia</option>
               </select>
             </div>
@@ -291,17 +487,21 @@ export default function AddressManager() {
           <div className="flex space-x-4 mt-6">
             <button
               onClick={editingAddress ? handleUpdateAddress : handleAddAddress}
-              disabled={loading}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50"
+              disabled={formLoading}
+              className="flex items-center space-x-2 bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50"
             >
-              {loading
-                ? "Saving..."
-                : editingAddress
-                ? "Update Address"
-                : "Add Address"}
+              {formLoading && <LoadingSpinner size="small" />}
+              <span>
+                {formLoading
+                  ? "Saving..."
+                  : editingAddress
+                  ? "Update Address"
+                  : "Add Address"}
+              </span>
             </button>
             <button
               onClick={resetForm}
+              disabled={formLoading}
               className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
               Cancel
@@ -327,7 +527,7 @@ export default function AddressManager() {
             <div
               key={address.id}
               className={`border-2 rounded-lg p-6 ${
-                address.isDefault
+                address.is_default
                   ? "border-purple-600 bg-purple-50"
                   : "border-gray-200"
               }`}
@@ -337,9 +537,9 @@ export default function AddressManager() {
                   <div className="flex items-center space-x-2 mb-2">
                     <FiMapPin className="w-4 h-4 text-gray-500" />
                     <h3 className="font-semibold text-gray-900">
-                      {address.type}
+                      {address.label}
                     </h3>
-                    {address.isDefault && (
+                    {address.is_default && (
                       <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
                         <FiCheck className="w-3 h-3" />
                         <span>Default</span>
@@ -347,25 +547,33 @@ export default function AddressManager() {
                     )}
                   </div>
                   <div className="text-gray-600 space-y-1">
-                    <div className="font-medium">{address.name}</div>
-                    <div>{address.street}</div>
-                    <div>
-                      {address.city}, {address.state} {address.zip}
+                    <div className="font-medium">{address.full_name}</div>
+                    {address.phone_number && (
+                      <div className="text-sm">{address.phone_number}</div>
+                    )}
+                    <div className="text-sm">{address.formatted_address}</div>
+                    <div className="text-xs text-gray-500">
+                      Added {formatDate(address.created_at)}
                     </div>
-                    <div>{address.country}</div>
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleEditAddress(address)}
-                    className="text-gray-400 hover:text-purple-600 transition-colors"
+                    disabled={formLoading}
+                    className="text-gray-400 hover:text-purple-600 transition-colors disabled:opacity-50"
                   >
                     <FiEdit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDeleteAddress(address.id)}
-                    disabled={address.isDefault}
+                    disabled={address.is_default || formLoading}
                     className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={
+                      address.is_default
+                        ? "Cannot delete default address"
+                        : "Delete address"
+                    }
                   >
                     <FiTrash2 className="w-4 h-4" />
                   </button>
@@ -375,14 +583,15 @@ export default function AddressManager() {
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleEditAddress(address)}
-                  className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={formLoading}
+                  className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Edit
                 </button>
-                {!address.isDefault && (
+                {!address.is_default && (
                   <button
                     onClick={() => handleSetDefault(address.id)}
-                    disabled={loading}
+                    disabled={formLoading}
                     className="flex-1 py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                   >
                     Set Default

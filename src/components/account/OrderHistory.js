@@ -13,6 +13,7 @@ import {
 } from "react-icons/fi";
 import LoadingSpinner from "../generic/LoadingSpinner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function OrderHistory() {
   const { authenticatedFetch } = useAuth();
@@ -20,6 +21,8 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterPeriod, setFilterPeriod] = useState("all");
+
+  const router = useRouter();
 
   useEffect(() => {
     loadOrders();
@@ -124,11 +127,13 @@ export default function OrderHistory() {
   const handleViewOrder = (orderNumber) => {
     // Navigate to order details page
     console.log("View order:", orderNumber);
+    router.push(`/orders/${orderNumber}`);
   };
 
   const handleTrackOrder = (orderNumber) => {
     // Navigate to tracking page
     console.log("Track order:", orderNumber);
+    router.push(`/orders/${orderNumber}`);
   };
 
   const handleDownloadInvoice = (orderNumber) => {

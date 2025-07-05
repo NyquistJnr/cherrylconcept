@@ -317,7 +317,7 @@ export default function SignUpPage() {
                 Create Account
               </h1>
               <p className="text-gray-600">
-                Join HeadWear and start your style journey
+                Join Cherryl Concept and start your style journey
               </p>
             </div>
 

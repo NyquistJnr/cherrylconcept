@@ -144,7 +144,9 @@ function LoginPage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Welcome Back
               </h1>
-              <p className="text-gray-600">Sign in to your HeadWear account</p>
+              <p className="text-gray-600">
+                Sign in to your Cherryl Concept account
+              </p>
               {redirectUrl && (
                 <p className="text-sm text-purple-600 mt-2">
                   Please sign in to continue to your destination

@@ -1,12 +1,6 @@
-import { Fira_Sans, Inter } from "next/font/google";
 import "../globals.css";
 import Header from "@/components/generic/Header";
 import Footer from "@/components/generic/Footer";
-import { AuthProvider } from "@/contexts/AuthContext";
-
-// const fira_sans = Fira_Sans({ subsets: ["latin"], weight: "400" });
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "Create Next App",
@@ -15,10 +9,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <main>
+    <div>
       <Header />
       {children}
       <Footer />
-    </main>
+    </div>
   );
 }
