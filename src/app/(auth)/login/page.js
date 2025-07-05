@@ -149,7 +149,7 @@ function LoginPage() {
               </p>
               {redirectUrl && (
                 <p className="text-sm text-purple-600 mt-2">
-                  Please sign in to continue to your destination
+                  Want to go to the home page? <Link href="/">Click here</Link>
                 </p>
               )}
             </div>
