@@ -1,7 +1,8 @@
 "use client";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 import { useState } from "react";
-import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -124,6 +125,8 @@ export default function AccountComponent() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileData, setProfileData] = useState(userData);
 
+  const { user, logout, authenticatedFetch, refreshUserProfile } = useAuth();
+
   const menuItems = [
     { id: "overview", label: "Account Overview", icon: FiUser },
     { id: "orders", label: "Order History", icon: FiShoppingBag },
@@ -166,15 +169,6 @@ export default function AccountComponent() {
 
   return (
     <>
-      <Head>
-        <title>My Account | HeadWear Dashboard</title>
-        <meta
-          name="description"
-          content="Manage your HeadWear account, view orders, wishlist, and account settings."
-        />
-        <meta name="robots" content="noindex, nofollow" />
-      </Head>
-
       <main className="pt-28 min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -194,6 +188,7 @@ export default function AccountComponent() {
                   <h2 className="text-xl font-bold text-gray-900">
                     {userData.firstName} {userData.lastName}
                   </h2>
+                  <p>{user?.first_name}</p>
                   <p className="text-gray-600">
                     Member since {userData.memberSince}
                   </p>
@@ -234,7 +229,10 @@ export default function AccountComponent() {
                       </button>
                     );
                   })}
-                  <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors">
+                  <button
+                    onClick={logout}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
+                  >
                     <FiLogOut className="w-5 h-5" />
                     <span>Sign Out</span>
                   </button>

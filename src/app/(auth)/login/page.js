@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
+import { withGuest } from "@/components/generic/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   FiMail,
   FiLock,
@@ -13,8 +15,12 @@ import {
   FiLoader,
 } from "react-icons/fi";
 
-export default function LoginPage() {
+function LoginPage() {
+  const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -24,39 +30,6 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({});
   const [rememberMe, setRememberMe] = useState(false);
 
-  // Secure token storage utility
-  const storeTokensSecurely = (tokens, userId) => {
-    try {
-      // Store tokens in httpOnly cookies via API call (most secure for production)
-      fetch("/api/auth/set-tokens", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          accessToken: tokens.access,
-          refreshToken: tokens.refresh,
-          userId: userId,
-        }),
-      });
-
-      // Store user ID in sessionStorage (cleared when tab closes)
-      sessionStorage.setItem("userId", userId);
-
-      // Store non-sensitive user data in localStorage for convenience
-      const userData = {
-        id: userId,
-        // Add other non-sensitive user data here if needed
-      };
-      localStorage.setItem("userData", JSON.stringify(userData));
-    } catch (error) {
-      console.error("Error storing tokens:", error);
-      // Fallback to localStorage if cookie storage fails
-      localStorage.setItem("accessToken", tokens.access);
-      localStorage.setItem("refreshToken", tokens.refresh);
-      localStorage.setItem("userId", userId);
-    }
-  };
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -99,109 +72,62 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/login/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        }
-      );
+      // Use the login function from AuthContext
+      const result = await login({
+        email: formData.email,
+        password: formData.password,
+      });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Login successful
-        console.log("Login successful:", data);
-
-        // Store tokens and user data securely
-        storeTokensSecurely(data.tokens, data.user.id);
-
-        // Show success toast
-        toast.success(`Welcome back, ${data.user.first_name}!`, {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-
-        // Redirect to account page
-        router.push("/account");
+      if (result.success) {
+        // Success toast is handled in AuthContext
+        // Redirect to intended page or account
+        const destination =
+          redirectUrl && redirectUrl.startsWith("/") ? redirectUrl : "/account";
+        router.push(destination);
       } else {
-        // Handle API errors
-        if (data.errors) {
-          // Handle structured errors
-          if (data.errors.non_field_errors) {
-            const errorMessage = data.errors.non_field_errors[0];
-            setErrors({ general: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-            });
-          } else if (data.errors.email) {
-            const errorMessage = Array.isArray(data.errors.email)
-              ? data.errors.email[0]
-              : data.errors.email;
-            setErrors({ email: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else if (data.errors.password) {
-            const errorMessage = Array.isArray(data.errors.password)
-              ? data.errors.password[0]
-              : data.errors.password;
-            setErrors({ password: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else {
-            const errorMessage = "Invalid email or password";
-            setErrors({ general: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          }
-        } else if (data.message) {
-          setErrors({ general: data.message });
-          toast.error(data.message, {
+        // Handle errors from AuthContext
+        setErrors(result.errors || {});
+
+        // Show specific error toasts
+        if (result.errors?.non_field_errors) {
+          toast.error(result.errors.non_field_errors[0], {
             position: "top-right",
             autoClose: 5000,
           });
-        } else {
-          const errorMessage = "Invalid email or password";
-          setErrors({ general: errorMessage });
-          toast.error(errorMessage, {
+        } else if (result.errors?.email) {
+          toast.error(
+            Array.isArray(result.errors.email)
+              ? result.errors.email[0]
+              : result.errors.email,
+            {
+              position: "top-right",
+              autoClose: 5000,
+            }
+          );
+        } else if (result.errors?.password) {
+          toast.error(
+            Array.isArray(result.errors.password)
+              ? result.errors.password[0]
+              : result.errors.password,
+            {
+              position: "top-right",
+              autoClose: 5000,
+            }
+          );
+        } else if (result.errors?.general) {
+          toast.error(result.errors.general, {
             position: "top-right",
             autoClose: 5000,
           });
         }
       }
     } catch (error) {
-      console.error("Login error:", error);
-      const errorMessage =
-        "Network error. Please check your connection and try again.";
+      console.error("Unexpected login error:", error);
+      const errorMessage = "An unexpected error occurred. Please try again.";
       setErrors({ general: errorMessage });
       toast.error(errorMessage, {
         position: "top-right",
         autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
       });
     } finally {
       setIsLoading(false);
@@ -219,7 +145,22 @@ export default function LoginPage() {
                 Welcome Back
               </h1>
               <p className="text-gray-600">Sign in to your HeadWear account</p>
+              {redirectUrl && (
+                <p className="text-sm text-purple-600 mt-2">
+                  Please sign in to continue to your destination
+                </p>
+              )}
             </div>
+
+            {/* General Error Display */}
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center space-x-2">
+                  <FiAlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  <span className="text-sm text-red-700">{errors.general}</span>
+                </div>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Email Field */}
@@ -246,11 +187,12 @@ export default function LoginPage() {
                         : "border-gray-300"
                     }`}
                     placeholder="Enter your email"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <FiAlertCircle className="w-4 h-4" />
+                    <FiAlertCircle className="w-4 h-4 flex-shrink-0" />
                     <span>{errors.email}</span>
                   </p>
                 )}
@@ -280,11 +222,13 @@ export default function LoginPage() {
                         : "border-gray-300"
                     }`}
                     placeholder="Enter your password"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <FiEyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -295,7 +239,7 @@ export default function LoginPage() {
                 </div>
                 {errors.password && (
                   <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                    <FiAlertCircle className="w-4 h-4" />
+                    <FiAlertCircle className="w-4 h-4 flex-shrink-0" />
                     <span>{errors.password}</span>
                   </p>
                 )}
@@ -310,6 +254,7 @@ export default function LoginPage() {
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                    disabled={isLoading}
                   />
                   <label
                     htmlFor="remember-me"
@@ -320,7 +265,7 @@ export default function LoginPage() {
                 </div>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-purple-600 hover:text-purple-700"
+                  className="text-sm text-purple-600 hover:text-purple-700 transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -349,15 +294,47 @@ export default function LoginPage() {
                 Don't have an account?{" "}
                 <Link
                   href="/signup"
-                  className="font-medium text-purple-600 hover:text-purple-700"
+                  className="font-medium text-purple-600 hover:text-purple-700 transition-colors"
                 >
                   Sign up for free
                 </Link>
               </p>
             </div>
+
+            {/* Development Helper */}
+            {process.env.NODE_ENV === "development" && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+                <p className="text-xs text-gray-500 mb-2">
+                  Development Mode - Quick Login:
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        email: "nyquist@mailinator.com",
+                        password: "Nyquist@2001",
+                      })
+                    }
+                    className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+                  >
+                    Fill Demo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ email: "", password: "" })}
+                    className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
     </>
   );
 }
+
+export default withGuest(LoginPage);

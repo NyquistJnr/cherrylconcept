@@ -26,22 +26,22 @@ export async function POST(request) {
       path: "/",
     };
 
-    // Set access token (shorter expiry)
+    // Set access token (longer expiry since no refresh)
     response.cookies.set("accessToken", accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60, // 15 minutes
+      maxAge: 24 * 60 * 60, // 24 hours
     });
 
-    // Set refresh token (longer expiry)
+    // Set refresh token (longer expiry for manual refresh if needed)
     response.cookies.set("refreshToken", refreshToken, {
       ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 30 * 24 * 60 * 60, // 30 days
     });
 
-    // Set user ID (for convenience, not sensitive)
+    // Set user ID (for convenience)
     response.cookies.set("userId", userId, {
       ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60, // 7 days
+      maxAge: 30 * 24 * 60 * 60, // 30 days
     });
 
     return response;

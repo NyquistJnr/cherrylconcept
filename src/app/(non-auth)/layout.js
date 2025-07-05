@@ -2,6 +2,7 @@ import { Fira_Sans, Inter } from "next/font/google";
 import "../globals.css";
 import Header from "@/components/generic/Header";
 import Footer from "@/components/generic/Footer";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // const fira_sans = Fira_Sans({ subsets: ["latin"], weight: "400" });
 
@@ -14,12 +15,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <Header />
-        {children}
-        <Footer />
-      </body>
-    </html>
+    <main>
+      <Header />
+      {children}
+      <Footer />
+    </main>
   );
 }
