@@ -1,9 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "react-toastify";
+import { withGuest } from "@/components/generic/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   FiMail,
   FiLock,
@@ -16,8 +18,12 @@ import {
   FiLoader,
 } from "react-icons/fi";
 
-export default function SignUpPage() {
+function SignUpPage() {
+  const { signup } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect");
+
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -33,40 +39,6 @@ export default function SignUpPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [wantsNewsletter, setWantsNewsletter] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-
-  // Secure token storage utility
-  const storeTokensSecurely = (tokens, userId) => {
-    try {
-      // Store tokens in httpOnly cookies via API call (most secure for production)
-      fetch("/api/auth/set-tokens", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          accessToken: tokens.access,
-          refreshToken: tokens.refresh,
-          userId: userId,
-        }),
-      });
-
-      // Store user ID in sessionStorage (cleared when tab closes)
-      sessionStorage.setItem("userId", userId);
-
-      // Store non-sensitive user data in localStorage for convenience
-      const userData = {
-        id: userId,
-        // Add other non-sensitive user data here if needed
-      };
-      localStorage.setItem("userData", JSON.stringify(userData));
-    } catch (error) {
-      console.error("Error storing tokens:", error);
-      // Fallback to localStorage if cookie storage fails
-      localStorage.setItem("accessToken", tokens.access);
-      localStorage.setItem("refreshToken", tokens.refresh);
-      localStorage.setItem("userId", userId);
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -85,6 +57,14 @@ export default function SignUpPage() {
       setErrors((prev) => ({
         ...prev,
         [name]: "",
+      }));
+    }
+
+    // Clear general errors when user makes changes
+    if (errors.general) {
+      setErrors((prev) => ({
+        ...prev,
+        general: "",
       }));
     }
   };
@@ -157,150 +137,76 @@ export default function SignUpPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      // Show validation errors as toasts
+      Object.entries(errors).forEach(([field, message]) => {
+        if (field !== "general") {
+          toast.error(message);
+        }
+      });
+      return;
+    }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/auth/register/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            email: formData.email,
-            phone_number: formData.phone,
-            password: formData.password,
-            confirm_password: formData.confirmPassword,
-          }),
-        }
-      );
+      // Use the signup function from AuthContext
+      const result = await signup({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone_number: formData.phone,
+        password: formData.password,
+        confirm_password: formData.confirmPassword,
+      });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Registration successful
-        console.log("Registration successful:", data);
-
-        // Store tokens and user data securely
-        storeTokensSecurely(data.tokens, data.user.id);
-
-        // Show success toast
-        toast.success(
-          `Welcome to Cherryl concept, ${data.user.first_name}! Your account has been created successfully.`,
-          {
-            position: "top-right",
-            autoClose: 4000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          }
-        );
-
-        // Redirect to account page or login page
-        router.push("/account");
+      if (result.success) {
+        // Success toast is handled in AuthContext
+        // Redirect to intended page or account
+        const destination =
+          redirectUrl && redirectUrl.startsWith("/") ? redirectUrl : "/account";
+        router.push(destination);
       } else {
-        // Handle API errors
-        if (data.errors) {
-          // Handle structured errors
-          if (data.errors.non_field_errors) {
-            const errorMessage = data.errors.non_field_errors[0];
-            setErrors({ general: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-            });
-          } else if (data.errors.email) {
-            const errorMessage = Array.isArray(data.errors.email)
-              ? data.errors.email[0]
-              : data.errors.email;
-            setErrors({ email: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else if (data.errors.password) {
-            const errorMessage = Array.isArray(data.errors.password)
-              ? data.errors.password[0]
-              : data.errors.password;
-            setErrors({ password: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else if (data.errors.phone_number) {
-            const errorMessage = Array.isArray(data.errors.phone_number)
-              ? data.errors.phone_number[0]
-              : data.errors.phone_number;
-            setErrors({ phone: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else if (data.errors.first_name) {
-            const errorMessage = Array.isArray(data.errors.first_name)
-              ? data.errors.first_name[0]
-              : data.errors.first_name;
-            setErrors({ firstName: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else if (data.errors.last_name) {
-            const errorMessage = Array.isArray(data.errors.last_name)
-              ? data.errors.last_name[0]
-              : data.errors.last_name;
-            setErrors({ lastName: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else {
-            const errorMessage =
-              "Registration failed. Please check your information and try again.";
-            setErrors({ general: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          }
-        } else if (data.message) {
-          setErrors({ general: data.message });
-          toast.error(data.message, {
-            position: "top-right",
-            autoClose: 5000,
-          });
-        } else {
-          const errorMessage = "Registration failed. Please try again.";
-          setErrors({ general: errorMessage });
-          toast.error(errorMessage, {
-            position: "top-right",
-            autoClose: 5000,
-          });
+        // Handle errors from AuthContext
+        setErrors(result.errors || {});
+
+        // Show specific error toasts
+        if (result.errors?.non_field_errors) {
+          toast.error(result.errors.non_field_errors[0]);
+        } else if (result.errors?.email) {
+          const errorMessage = Array.isArray(result.errors.email)
+            ? result.errors.email[0]
+            : result.errors.email;
+          toast.error(errorMessage);
+        } else if (result.errors?.password) {
+          const errorMessage = Array.isArray(result.errors.password)
+            ? result.errors.password[0]
+            : result.errors.password;
+          toast.error(errorMessage);
+        } else if (result.errors?.phone_number) {
+          const errorMessage = Array.isArray(result.errors.phone_number)
+            ? result.errors.phone_number[0]
+            : result.errors.phone_number;
+          toast.error(errorMessage);
+        } else if (result.errors?.first_name) {
+          const errorMessage = Array.isArray(result.errors.first_name)
+            ? result.errors.first_name[0]
+            : result.errors.first_name;
+          toast.error(errorMessage);
+        } else if (result.errors?.last_name) {
+          const errorMessage = Array.isArray(result.errors.last_name)
+            ? result.errors.last_name[0]
+            : result.errors.last_name;
+          toast.error(errorMessage);
+        } else if (result.errors?.general) {
+          toast.error(result.errors.general);
         }
       }
     } catch (error) {
-      console.error("Registration error:", error);
-      const errorMessage =
-        "Network error. Please check your connection and try again.";
+      console.error("Unexpected signup error:", error);
+      const errorMessage = "An unexpected error occurred. Please try again.";
       setErrors({ general: errorMessage });
-      toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -319,13 +225,18 @@ export default function SignUpPage() {
               <p className="text-gray-600">
                 Join Cherryl Concept and start your style journey
               </p>
+              {redirectUrl && (
+                <p className="text-sm text-purple-600 mt-2">
+                  Create an account to continue to your destination
+                </p>
+              )}
             </div>
 
-            {/* Error Message */}
+            {/* General Error Message */}
             {errors.general && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center space-x-2">
-                  <FiAlertCircle className="w-4 h-4 text-red-600" />
+                  <FiAlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
                   <span className="text-sm text-red-700">{errors.general}</span>
                 </div>
               </div>
@@ -339,7 +250,7 @@ export default function SignUpPage() {
                     htmlFor="firstName"
                     className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    First Name
+                    First Name *
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -357,11 +268,13 @@ export default function SignUpPage() {
                           : "border-gray-300"
                       }`}
                       placeholder="John"
+                      disabled={isLoading}
                     />
                   </div>
                   {errors.firstName && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.firstName}
+                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <FiAlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{errors.firstName}</span>
                     </p>
                   )}
                 </div>
@@ -371,7 +284,7 @@ export default function SignUpPage() {
                     htmlFor="lastName"
                     className="block text-sm font-medium text-gray-700 mb-2"
                   >
-                    Last Name
+                    Last Name *
                   </label>
                   <input
                     type="text"
@@ -385,10 +298,12 @@ export default function SignUpPage() {
                         : "border-gray-300"
                     }`}
                     placeholder="Doe"
+                    disabled={isLoading}
                   />
                   {errors.lastName && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.lastName}
+                    <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                      <FiAlertCircle className="w-3 h-3 flex-shrink-0" />
+                      <span>{errors.lastName}</span>
                     </p>
                   )}
                 </div>
@@ -400,7 +315,7 @@ export default function SignUpPage() {
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Email Address
+                  Email Address *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -418,10 +333,14 @@ export default function SignUpPage() {
                         : "border-gray-300"
                     }`}
                     placeholder="john@example.com"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <FiAlertCircle className="w-3 h-3 flex-shrink-0" />
+                    <span>{errors.email}</span>
+                  </p>
                 )}
               </div>
 
@@ -431,7 +350,7 @@ export default function SignUpPage() {
                   htmlFor="phone"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Phone Number
+                  Phone Number *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -448,11 +367,15 @@ export default function SignUpPage() {
                         ? "border-red-300 bg-red-50"
                         : "border-gray-300"
                     }`}
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="+234 xxx xxx xxxx"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.phone && (
-                  <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <FiAlertCircle className="w-3 h-3 flex-shrink-0" />
+                    <span>{errors.phone}</span>
+                  </p>
                 )}
               </div>
 
@@ -462,7 +385,7 @@ export default function SignUpPage() {
                   htmlFor="password"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Password
+                  Password *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -480,11 +403,13 @@ export default function SignUpPage() {
                         : "border-gray-300"
                     }`}
                     placeholder="Create a strong password"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <FiEyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -508,11 +433,18 @@ export default function SignUpPage() {
                         {getPasswordStrengthText()}
                       </span>
                     </div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      Use 8+ characters with letters, numbers, and symbols for a
+                      strong password
+                    </div>
                   </div>
                 )}
 
                 {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <FiAlertCircle className="w-3 h-3 flex-shrink-0" />
+                    <span>{errors.password}</span>
+                  </p>
                 )}
               </div>
 
@@ -522,7 +454,7 @@ export default function SignUpPage() {
                   htmlFor="confirmPassword"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Confirm Password
+                  Confirm Password *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -540,11 +472,13 @@ export default function SignUpPage() {
                         : "border-gray-300"
                     }`}
                     placeholder="Confirm your password"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    disabled={isLoading}
                   >
                     {showConfirmPassword ? (
                       <FiEyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
@@ -556,13 +490,14 @@ export default function SignUpPage() {
                 {formData.confirmPassword &&
                   formData.password === formData.confirmPassword && (
                     <p className="mt-1 text-sm text-green-600 flex items-center space-x-1">
-                      <FiCheck className="w-4 h-4" />
+                      <FiCheck className="w-3 h-3 flex-shrink-0" />
                       <span>Passwords match</span>
                     </p>
                   )}
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.confirmPassword}
+                  <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
+                    <FiAlertCircle className="w-3 h-3 flex-shrink-0" />
+                    <span>{errors.confirmPassword}</span>
                   </p>
                 )}
               </div>
@@ -576,6 +511,7 @@ export default function SignUpPage() {
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
                     className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1"
+                    disabled={isLoading}
                   />
                   <label
                     htmlFor="terms"
@@ -584,21 +520,26 @@ export default function SignUpPage() {
                     I agree to the{" "}
                     <Link
                       href="/terms"
-                      className="text-purple-600 hover:text-purple-700"
+                      className="text-purple-600 hover:text-purple-700 underline"
+                      target="_blank"
                     >
                       Terms of Service
                     </Link>{" "}
                     and{" "}
                     <Link
                       href="/privacy"
-                      className="text-purple-600 hover:text-purple-700"
+                      className="text-purple-600 hover:text-purple-700 underline"
+                      target="_blank"
                     >
                       Privacy Policy
                     </Link>
                   </label>
                 </div>
                 {errors.terms && (
-                  <p className="text-sm text-red-600">{errors.terms}</p>
+                  <p className="text-sm text-red-600 flex items-center space-x-1">
+                    <FiAlertCircle className="w-3 h-3 flex-shrink-0" />
+                    <span>{errors.terms}</span>
+                  </p>
                 )}
 
                 <div className="flex items-start">
@@ -608,6 +549,7 @@ export default function SignUpPage() {
                     checked={wantsNewsletter}
                     onChange={(e) => setWantsNewsletter(e.target.checked)}
                     className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded mt-1"
+                    disabled={isLoading}
                   />
                   <label
                     htmlFor="newsletter"
@@ -641,15 +583,61 @@ export default function SignUpPage() {
                 Already have an account?{" "}
                 <Link
                   href="/login"
-                  className="font-medium text-purple-600 hover:text-purple-700"
+                  className="font-medium text-purple-600 hover:text-purple-700 transition-colors"
                 >
                   Sign in here
                 </Link>
               </p>
             </div>
+
+            {/* Development Helper */}
+            {process.env.NODE_ENV === "development" && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+                <p className="text-xs text-gray-500 mb-2">
+                  Development Mode - Quick Fill:
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        firstName: "John",
+                        lastName: "Doe",
+                        email: "john.doe@mailinator.com",
+                        phone: "+234 812 345 6789",
+                        password: "Secure@Pass123!",
+                        confirmPassword: "Secure@Pass123!",
+                      })
+                    }
+                    className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+                  >
+                    Fill Demo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({
+                        firstName: "",
+                        lastName: "",
+                        email: "",
+                        phone: "",
+                        password: "",
+                        confirmPassword: "",
+                      })
+                    }
+                    className="text-xs px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
     </>
   );
 }
+
+// Wrap with guest protection to redirect authenticated users
+export default withGuest(SignUpPage);
