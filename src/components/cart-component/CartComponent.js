@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/contexts/CartContext";
+import { useRouter } from "next/navigation";
 
 export default function CartComponent() {
   const [promoCode, setPromoCode] = useState("");
   const [discount, setDiscount] = useState(0);
+
+  const router = useRouter();
 
   // Get cart data and functions from context
   const {
@@ -82,14 +84,6 @@ export default function CartComponent() {
 
   return (
     <>
-      <Head>
-        <title>Shopping Cart ({itemCount} items) | HeadWear</title>
-        <meta
-          name="description"
-          content="Review your HeadWear items and proceed to checkout. Free shipping on orders over ₦50,000."
-        />
-      </Head>
-
       <main className="pt-28 min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-8">
@@ -355,7 +349,10 @@ export default function CartComponent() {
                 )}
 
                 {/* Checkout Button */}
-                <button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 mb-4">
+                <button
+                  onClick={() => router.push("/checkout")}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 mb-4"
+                >
                   Proceed to Checkout
                 </button>
 

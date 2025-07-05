@@ -70,16 +70,16 @@ export default function OrderHistory() {
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "delivered":
-        return "bg-green-100 text-green-800";
+        return "bg-[#dcfce7] text-[#15803d]";
       case "shipped":
-        return "bg-blue-100 text-blue-800";
+        return "bg-[#e0e7ff] text-[#3730a3]";
       case "pending":
       case "processing":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-[#fef9c3] text-[#854d0e]";
       case "confirmed":
-        return "bg-purple-100 text-purple-800";
+        return "bg-[#ede9fe] text-[#6d28d9]";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-[#f3f4f6] text-[#1f2937]";
     }
   };
 
