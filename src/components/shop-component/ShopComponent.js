@@ -3,72 +3,11 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/contexts/CartContext";
+import { fetchProducts, fetchCategories } from "@/lib/api"; // Assume API functions are in lib/api.js
 
-// API service functions
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
-export async function fetchProducts(params = {}) {
-  const searchParams = new URLSearchParams();
-
-  // Add parameters to search params if they exist
-  if (params.search) searchParams.append("search", params.search);
-  if (params.price_min) searchParams.append("price_min", params.price_min);
-  if (params.price_max) searchParams.append("price_max", params.price_max);
-  if (params.rating_min) searchParams.append("rating_min", params.rating_min);
-  if (params.colors) searchParams.append("colors", params.colors);
-  if (params.sizes) searchParams.append("sizes", params.sizes);
-  if (params.is_new !== undefined) searchParams.append("is_new", params.is_new);
-  if (params.is_popular !== undefined)
-    searchParams.append("is_popular", params.is_popular);
-  if (params.is_trending !== undefined)
-    searchParams.append("is_trending", params.is_trending);
-  if (params.is_best_seller !== undefined)
-    searchParams.append("is_best_seller", params.is_best_seller);
-  if (params.ordering) searchParams.append("ordering", params.ordering);
-  if (params.category) searchParams.append("category", params.category);
-
-  const url = `${API_BASE_URL}/products/?${searchParams.toString()}`;
-
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    throw error;
-  }
-}
-
-export async function fetchCategories() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/products/categories/`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    return { data: [] }; // Return empty array on error
-  }
-}
-
+// Constants
 const priceRanges = [
   { id: "all", name: "All Prices", min: null, max: null },
   { id: "under-25000", name: "Under ₦25,000", min: null, max: 25000 },
@@ -86,15 +25,7 @@ const sortOptions = [
   { id: "rating", name: "Highest Rated", value: "-rating" },
 ];
 
-export default function ProductListingPage({
-  initialProducts,
-  initialCategories,
-}) {
-  const [products, setProducts] = useState(initialProducts?.data || []);
-  const [categories, setCategories] = useState(initialCategories?.data || []);
-  const [totalCount, setTotalCount] = useState(initialProducts?.count || 0);
-  const [loading, setLoading] = useState(false);
-
+export default function ProductList() {
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
@@ -106,50 +37,37 @@ export default function ProductListingPage({
   // Cart context
   const { addToCart } = useCart();
 
-  // Fetch products when filters change
-  useEffect(() => {
-    const fetchFilteredProducts = async () => {
-      setLoading(true);
-      try {
-        const params = {};
+  // TanStack Query for Categories
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+  });
+  const categories = categoriesData?.data || [];
 
-        // Apply filters
-        if (searchQuery) params.search = searchQuery;
-        if (selectedCategory !== "all") params.category = selectedCategory;
-
-        // Apply price range
-        if (selectedPriceRange !== "all") {
-          const range = priceRanges.find((r) => r.id === selectedPriceRange);
-          if (range.min) params.price_min = range.min;
-          if (range.max) params.price_max = range.max;
-        }
-
-        // Apply sorting
-        const sortOption = sortOptions.find((s) => s.id === sortBy);
-        if (sortOption?.value) params.ordering = sortOption.value;
-
-        const response = await fetchProducts(params);
-        setProducts(response.data || []);
-        setTotalCount(response.count || 0);
-
-        const responseCategories = await fetchCategories();
-        setCategories(responseCategories.data || []);
-      } catch (error) {
-        console.error("Error fetching filtered products:", error);
-        setProducts([]);
-        setTotalCount(0);
-      } finally {
-        setLoading(false);
+  // TanStack Query for Products - driven by state
+  const productsQuery = useQuery({
+    queryKey: [
+      "products",
+      { searchQuery, selectedCategory, selectedPriceRange, sortBy },
+    ],
+    queryFn: () => {
+      const params = { search: searchQuery };
+      if (selectedCategory !== "all") params.category = selectedCategory;
+      if (selectedPriceRange !== "all") {
+        const range = priceRanges.find((r) => r.id === selectedPriceRange);
+        if (range?.min) params.price_min = range.min;
+        if (range?.max) params.price_max = range.max;
       }
-    };
+      const sortOption = sortOptions.find((s) => s.id === sortBy);
+      if (sortOption?.value) params.ordering = sortOption.value;
+      return fetchProducts(params);
+    },
+    keepPreviousData: true, // Shows old data while new data is fetching for better UX
+  });
 
-    // Debounce the API call
-    const timeoutId = setTimeout(() => {
-      fetchFilteredProducts();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [selectedCategory, selectedPriceRange, sortBy, searchQuery]);
+  const { isLoading, isError, data: productsData, isFetching } = productsQuery;
+  const products = productsData?.data || [];
+  const totalCount = productsData?.count || 0;
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-NG", {
@@ -157,11 +75,6 @@ export default function ProductListingPage({
       currency: "NGN",
       minimumFractionDigits: 0,
     }).format(price);
-  };
-
-  const calculateDiscountPercentage = (price, originalPrice) => {
-    if (!originalPrice) return 0;
-    return Math.round(((originalPrice - price) / originalPrice) * 100);
   };
 
   const StarRating = ({ rating, reviews }) => (
@@ -185,125 +98,84 @@ export default function ProductListingPage({
   );
 
   const handleAddToCart = async (product, e) => {
-    e.stopPropagation(); // Prevent any parent click handlers
-
+    e.stopPropagation();
     try {
       await addToCart(
         product,
-        product.colors?.[0] || "", // Default to first color
-        product.sizes?.[0] || "", // Default to first size
-        1 // Default quantity
+        product.colors?.[0] || "",
+        product.sizes?.[0] || "",
+        1
       );
     } catch (error) {
       console.error("Error adding to cart:", error);
     }
   };
 
-  const ProductCard = ({ product, isListView = false }) => {
-    const discountPercentage = product.discount_percentage || 0;
-
-    return (
-      <div
-        className={`group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden ${
-          isListView ? "flex h-48" : ""
-        }`}
-      >
-        <div
-          className={`relative overflow-hidden ${
-            isListView ? "w-48 flex-shrink-0" : "aspect-square"
-          }`}
+  const ProductCard = ({ product }) => (
+    <div className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+      <div className="relative overflow-hidden aspect-square">
+        {product.is_new && (
+          <span className="absolute top-3 left-3 z-10 bg-green-500 text-white px-3 py-1 text-xs font-semibold rounded-full">
+            New
+          </span>
+        )}
+        {product.discount_percentage > 0 && (
+          <span className="absolute bottom-3 left-3 z-10 bg-red-500 text-white px-2 py-1 text-xs font-semibold rounded">
+            -{Math.round(product.discount_percentage)}%
+          </span>
+        )}
+        <Link href={`/shop/${product.id}`}>
+          <Image
+            src={product.main_image}
+            alt={product.name}
+            fill
+            className="object-cover group-hover:scale-110 transition-transform duration-500"
+          />
+        </Link>
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+        <button
+          onClick={() => setQuickViewProduct(product)}
+          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         >
-          {product.is_new && (
-            <span className="absolute top-3 left-3 z-10 bg-green-500 text-white px-3 py-1 text-xs font-semibold rounded-full">
-              New
-            </span>
-          )}
-          {product.is_popular && (
-            <span className="absolute top-3 right-3 z-10 bg-purple-600 text-white px-3 py-1 text-xs font-semibold rounded-full">
-              Popular
-            </span>
-          )}
-          {product.is_trending && (
-            <span className="absolute top-12 right-3 z-10 bg-red-500 text-white px-3 py-1 text-xs font-semibold rounded-full">
-              Trending
-            </span>
-          )}
-          {product.is_best_seller && (
-            <span className="absolute top-12 left-3 z-10 bg-yellow-500 text-white px-3 py-1 text-xs font-semibold rounded-full">
-              Best Seller
-            </span>
-          )}
-          {discountPercentage > 0 && (
-            <span className="absolute bottom-3 left-3 z-10 bg-red-500 text-white px-2 py-1 text-xs font-semibold rounded">
-              -{Math.round(discountPercentage)}%
-            </span>
-          )}
+          <span className="bg-white text-gray-900 px-4 py-2 rounded-full font-semibold shadow-lg">
+            Quick View
+          </span>
+        </button>
+      </div>
+      <div className="p-6 flex flex-col">
+        <div className="flex-grow">
           <Link href={`/shop/${product.id}`}>
-            <Image
-              src={product.main_image}
-              alt={product.name}
-              fill
-              className="object-cover group-hover:scale-110 transition-transform duration-500"
-            />
-          </Link>
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-          <button
-            onClick={() => setQuickViewProduct(product)}
-            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          >
-            <span className="bg-white text-gray-900 px-4 py-2 rounded-full font-semibold shadow-lg">
-              Quick View
+            <span className="text-sm text-purple-600 font-medium">
+              {product.category_name}
             </span>
-          </button>
-        </div>
-
-        <div
-          className={`p-6 ${
-            isListView ? "flex-1 flex flex-col justify-between" : ""
-          }`}
-        >
-          <div>
-            <Link href={`/shop/${product.id}`}>
-              <span className="text-sm text-purple-600 font-medium">
-                {product.category_name}
+            <h3 className="font-semibold text-lg mb-2 text-gray-900 group-hover:text-purple-600 transition-colors">
+              {product.name}
+            </h3>
+          </Link>
+          <StarRating
+            rating={parseFloat(product.rating)}
+            reviews={product.reviews_count}
+          />
+          <div className="flex items-center space-x-2 mt-2 mb-4">
+            <span className="text-2xl font-bold text-gray-900">
+              {formatPrice(product.price)}
+            </span>
+            {product.original_price && (
+              <span className="text-lg text-gray-500 line-through">
+                {formatPrice(product.original_price)}
               </span>
-              <h3 className="font-semibold text-lg mb-2 text-gray-900 group-hover:text-purple-600 transition-colors">
-                {product.name}
-              </h3>
-            </Link>
-            <StarRating
-              rating={parseFloat(product.rating)}
-              reviews={product.reviews_count}
-            />
-            <div className="flex items-center space-x-2 mt-2 mb-4">
-              <span className="text-2xl font-bold text-gray-900">
-                {formatPrice(product.price)}
-              </span>
-              {product.original_price && (
-                <span className="text-lg text-gray-500 line-through">
-                  {formatPrice(product.original_price)}
-                </span>
-              )}
-            </div>
-            {isListView && (
-              <div className="mb-4">
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
-                  <span>Colors: {product.colors?.length || 0}</span>
-                  <span>Sizes: {product.sizes?.length || 0}</span>
-                </div>
-              </div>
             )}
           </div>
-          <button
-            onClick={(e) => handleAddToCart(product, e)}
-            className="w-full bg-black text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors duration-300"
-          >
-            Add to Cart
-          </button>
         </div>
+        <button
+          onClick={(e) => handleAddToCart(product, e)}
+          className="w-full mt-auto bg-black text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors duration-300"
+        >
+          Add to Cart
+        </button>
       </div>
-    );
-  };
+    </div>
+  );
 
   const QuickViewModal = ({ product, onClose }) => {
     const [selectedColor, setSelectedColor] = useState("");
@@ -568,7 +440,6 @@ export default function ProductListingPage({
 
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Sidebar Filters */}
             <aside
               className={`lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}
             >
@@ -587,7 +458,6 @@ export default function ProductListingPage({
                   </button>
                 </div>
 
-                {/* Search */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Search Products
@@ -597,11 +467,10 @@ export default function ProductListingPage({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search for products..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
-                {/* Categories */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-4">Categories</h3>
                   <div className="space-y-2">
@@ -620,36 +489,27 @@ export default function ProductListingPage({
                         </span>
                       </div>
                     </button>
-                    {categories && categories.length > 0 ? (
-                      categories
-                        .filter((category) => category.is_active)
-                        .map((category) => (
-                          <button
-                            key={category.id}
-                            onClick={() => setSelectedCategory(category.id)}
-                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                              selectedCategory === category.id
-                                ? "bg-purple-100 text-purple-700 font-medium"
-                                : "hover:bg-gray-100"
-                            }`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span>{category.name}</span>
-                              <span className="text-sm text-gray-500">
-                                ({category.products_count})
-                              </span>
-                            </div>
-                          </button>
-                        ))
-                    ) : (
-                      <div className="text-sm text-gray-500 px-3 py-2">
-                        Loading categories...
-                      </div>
-                    )}
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() => setSelectedCategory(category.id)}
+                        className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                          selectedCategory === category.id
+                            ? "bg-purple-100 text-purple-700 font-medium"
+                            : "hover:bg-gray-100"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span>{category.name}</span>
+                          <span className="text-sm text-gray-500">
+                            ({category.products_count})
+                          </span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Price Range */}
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-4">Price Range</h3>
                   <div className="space-y-2">
@@ -671,9 +531,7 @@ export default function ProductListingPage({
               </div>
             </aside>
 
-            {/* Main Content */}
             <div className="flex-1">
-              {/* Toolbar */}
               <div className="bg-white rounded-2xl shadow-md p-6 mb-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
                   <div className="flex items-center space-x-4">
@@ -684,14 +542,12 @@ export default function ProductListingPage({
                       Filters
                     </button>
                     <span className="text-gray-600">
-                      {loading
+                      {isFetching
                         ? "Loading..."
                         : `Showing ${products.length} of ${totalCount} products`}
                     </span>
                   </div>
-
                   <div className="flex items-center space-x-4">
-                    {/* Sort Dropdown */}
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
@@ -707,8 +563,7 @@ export default function ProductListingPage({
                 </div>
               </div>
 
-              {/* Products Grid */}
-              {loading ? (
+              {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                   {[...Array(6)].map((_, i) => (
                     <div
@@ -721,6 +576,10 @@ export default function ProductListingPage({
                     </div>
                   ))}
                 </div>
+              ) : isError ? (
+                <div className="text-center py-16 text-red-500">
+                  Failed to load products.
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                   {products.map((product) => (
@@ -729,78 +588,24 @@ export default function ProductListingPage({
                 </div>
               )}
 
-              {/* No Results */}
-              {!loading && products.length === 0 && (
+              {!isLoading && !isFetching && products.length === 0 && (
                 <div className="text-center py-16">
-                  <div className="max-w-md mx-auto">
-                    <svg
-                      className="w-16 h-16 mx-auto text-gray-300 mb-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.5-.93-6.072-2.44m0 0L5 13m.928-.69A7.962 7.962 0 014 12c0-1.21.25-2.36.7-3.4M5 13l-.928.69M19 13l-.928-.69M19 13l.928.69"
-                      />
-                    </svg>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      No products found
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      Try adjusting your filters or search terms
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSelectedCategory("all");
-                        setSelectedPriceRange("all");
-                        setSearchQuery("");
-                      }}
-                      className="bg-purple-600 text-white px-6 py-2 rounded-full font-medium hover:bg-purple-700 transition-colors"
-                    >
-                      Clear Filters
-                    </button>
-                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No products found
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your filters or search terms
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
       </main>
-
-      {/* Quick View Modal */}
       <QuickViewModal
         product={quickViewProduct}
         onClose={() => setQuickViewProduct(null)}
       />
     </>
   );
-}
-
-// Server-side rendering
-export async function getServerSideProps(context) {
-  try {
-    // Fetch initial data on the server
-    const [productsResponse, categoriesResponse] = await Promise.all([
-      fetchProducts(),
-      fetchCategories(),
-    ]);
-
-    return {
-      props: {
-        initialProducts: productsResponse,
-        initialCategories: categoriesResponse,
-      },
-    };
-  } catch (error) {
-    console.error("Error in getServerSideProps:", error);
-    return {
-      props: {
-        initialProducts: { data: [], count: 0 },
-        initialCategories: { data: [] },
-      },
-    };
-  }
 }
