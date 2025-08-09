@@ -334,8 +334,7 @@ export default function CartComponent() {
                 {shipping > 0 && (
                   <div className="mb-6 p-4 bg-yellow-50 rounded-lg">
                     <p className="text-sm text-yellow-800 mb-2">
-                      Add {formatPrice(50000 - subtotal)} more for free
-                      shipping!
+                      Add {formatPrice(100000 - total)} more for free shipping!
                     </p>
                     <div className="w-full bg-yellow-200 rounded-full h-2">
                       <div

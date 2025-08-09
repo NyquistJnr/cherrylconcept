@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/contexts/CartContext";
-import { fetchProducts, fetchCategories } from "@/lib/api"; // Assume API functions are in lib/api.js
+import { fetchProducts, fetchCategories } from "@/lib/api";
 
 // Constants
 const priceRanges = [

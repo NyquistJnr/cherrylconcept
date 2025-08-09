@@ -110,8 +110,8 @@ export function CartProvider({ children }) {
     return {
       subtotal,
       itemCount,
-      shipping: subtotal > 50000 ? 0 : 9999, // Free shipping over ₦50,000
-      tax: subtotal * 0.08, // 8% tax
+      shipping: subtotal > 100000 ? 0 : 10000, // Free shipping over ₦100,000
+      tax: subtotal * 0.03, // 3% tax
     };
   };
 

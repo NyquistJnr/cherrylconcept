@@ -65,104 +65,184 @@ const faqs = [
   },
 ];
 
+const Spinner = () => (
+  <svg
+    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    ></circle>
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    ></path>
+  </svg>
+);
+
+// --- Beautiful Feedback Modal ---
+const FeedbackModal = ({ type, title, message, onClose }) => {
+  if (!type) return null;
+
+  const isSuccess = type === "success";
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 transition-opacity duration-300">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center transform scale-95 hover:scale-100 transition-transform duration-300">
+        <div
+          className={`mx-auto flex items-center justify-center h-16 w-16 rounded-full ${
+            isSuccess ? "bg-green-100" : "bg-red-100"
+          }`}
+        >
+          {isSuccess ? (
+            <svg
+              className="h-8 w-8 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="h-8 w-8 text-red-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          )}
+        </div>
+        <h3 className="text-2xl font-bold text-gray-800 mt-6">{title}</h3>
+        <p className="text-gray-600 mt-2 text-base">{message}</p>
+        <button
+          onClick={onClose}
+          className={`w-full mt-8 py-3 rounded-lg text-white font-semibold shadow-md transition-transform transform hover:scale-105 ${
+            isSuccess
+              ? "bg-purple-600 hover:bg-purple-700"
+              : "bg-red-500 hover:bg-red-600"
+          }`}
+        >
+          {isSuccess ? "Great!" : "Try Again"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --- Page Data ---
 const departments = [
   { name: "General Inquiry", value: "general" },
+  { name: "Sales & Orders", value: "sales" },
   { name: "Customer Support", value: "support" },
-  { name: "Order Issues", value: "orders" },
-  { name: "Returns & Exchanges", value: "returns" },
-  { name: "Wholesale Inquiry", value: "wholesale" },
-  { name: "Press & Media", value: "press" },
-  { name: "Partnerships", value: "partnerships" },
+  { name: "Partnerships & Press", value: "partnerships" },
 ];
 
 export default function ContactUsComponent() {
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
+    first_name: "",
+    last_name: "",
     email: "",
-    phone: "",
+    phone_number: "",
     department: "general",
     subject: "",
     message: "",
-    newsletter: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
+  const [modalState, setModalState] = useState({
+    type: null,
+    title: "",
+    message: "",
+  });
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setModalState({ type: null, title: "", message: "" });
+
+    const API_BASE_URL =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
     try {
-      // Simulate form submission
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch(`${API_BASE_URL}/contact/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-      setSubmitStatus("success");
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Create a user-friendly error message from the backend response
+        const errorMessages = Object.entries(data)
+          .map(
+            ([field, errors]) =>
+              `${field.replace(/_/g, " ")}: ${errors.join(", ")}`
+          )
+          .join(" ");
+        throw new Error(errorMessages || "An unexpected error occurred.");
+      }
+
+      // Show success modal
+      setModalState({
+        type: "success",
+        title: "Message Sent!",
+        message:
+          "Thank you for reaching out. Our team has received your message and will get back to you within 24 hours.",
+      });
+
+      // Reset form on success
       setFormData({
-        firstName: "",
-        lastName: "",
+        first_name: "",
+        last_name: "",
         email: "",
-        phone: "",
+        phone_number: "",
         department: "general",
         subject: "",
         message: "",
-        newsletter: false,
       });
     } catch (error) {
-      setSubmitStatus("error");
+      // Show error modal
+      setModalState({
+        type: "error",
+        title: "Submission Failed",
+        message:
+          error.message ||
+          "We couldn’t send your message. Please check the form for errors and try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ContactPage",
-    name: "Contact HeadWear",
-    description:
-      "Get in touch with HeadWear for customer support, product inquiries, and more. Multiple ways to reach our team including phone, email, and live chat.",
-    url: "https://yourdomain.com/contact",
-    mainEntity: {
-      "@type": "Organization",
-      name: "HeadWear",
-      contactPoint: [
-        {
-          "@type": "ContactPoint",
-          telephone: "+1-555-123-4567",
-          contactType: "customer service",
-          availableLanguage: ["English"],
-          hoursAvailable: {
-            "@type": "OpeningHoursSpecification",
-            dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-            opens: "09:00",
-            closes: "18:00",
-          },
-        },
-        {
-          "@type": "ContactPoint",
-          email: "hello@headwear.com",
-          contactType: "customer service",
-        },
-      ],
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: "123 Fashion Street",
-        addressLocality: "New York",
-        addressRegion: "NY",
-        postalCode: "10001",
-        addressCountry: "US",
-      },
-    },
+  const handleCloseModal = () => {
+    setModalState({ type: null, title: "", message: "" });
   };
 
   return (
@@ -182,103 +262,58 @@ export default function ContactUsComponent() {
           </div>
         </section>
 
+        <FeedbackModal {...modalState} onClose={handleCloseModal} />
+
         {/* Contact Form */}
-        <section className="py-12 sm:py-16 md:py-20 bg-gray-50">
+        <section className="py-16 md:py-24">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-12 sm:mb-16">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+              <div className="text-center mb-16">
+                <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
                   Send Us a Message
                 </h2>
-                <p className="text-lg sm:text-xl text-gray-600">
+                <p className="text-lg text-gray-600">
                   Fill out the form below and we'll get back to you within 24
-                  hours
+                  hours.
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12">
-                {submitStatus === "success" && (
-                  <div className="mb-8 p-4 bg-green-100 border border-green-300 rounded-lg">
-                    <div className="flex items-center">
-                      <svg
-                        className="w-5 h-5 text-green-500 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <p className="text-green-700 font-medium">
-                        Thank you! Your message has been sent successfully.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {submitStatus === "error" && (
-                  <div className="mb-8 p-4 bg-red-100 border border-red-300 rounded-lg">
-                    <div className="flex items-center">
-                      <svg
-                        className="w-5 h-5 text-red-500 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                      <p className="text-red-700 font-medium">
-                        Sorry, there was an error sending your message. Please
-                        try again.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
+              <div className="bg-white rounded-2xl shadow-xl p-8 lg:p-12">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label
-                        htmlFor="firstName"
+                        htmlFor="first_name"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
                         First Name *
                       </label>
                       <input
                         type="text"
-                        id="firstName"
-                        name="firstName"
-                        value={formData.firstName}
+                        id="first_name"
+                        name="first_name"
+                        value={formData.first_name}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                         placeholder="Enter your first name"
                       />
                     </div>
                     <div>
                       <label
-                        htmlFor="lastName"
+                        htmlFor="last_name"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
                         Last Name *
                       </label>
                       <input
                         type="text"
-                        id="lastName"
-                        name="lastName"
-                        value={formData.lastName}
+                        id="last_name"
+                        name="last_name"
+                        value={formData.last_name}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                         placeholder="Enter your last name"
                       />
                     </div>
@@ -299,69 +334,68 @@ export default function ContactUsComponent() {
                         value={formData.email}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                         placeholder="your.email@example.com"
                       />
                     </div>
                     <div>
                       <label
-                        htmlFor="phone"
+                        htmlFor="phone_number"
                         className="block text-sm font-medium text-gray-700 mb-2"
                       >
                         Phone Number
                       </label>
                       <input
                         type="tel"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
+                        id="phone_number"
+                        name="phone_number"
+                        value={formData.phone_number}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                         placeholder="+1 (555) 123-4567"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label
-                        htmlFor="department"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Department
-                      </label>
-                      <select
-                        id="department"
-                        name="department"
-                        value={formData.department}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                      >
-                        {departments.map((dept) => (
-                          <option key={dept.value} value={dept.value}>
-                            {dept.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="subject"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Subject *
-                      </label>
-                      <input
-                        type="text"
-                        id="subject"
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                        placeholder="Brief subject of your message"
-                      />
-                    </div>
+                  <div>
+                    <label
+                      htmlFor="department"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Department
+                    </label>
+                    <select
+                      id="department"
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                    >
+                      {departments.map((dept) => (
+                        <option key={dept.value} value={dept.value}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="subject"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
+                      Subject *
+                    </label>
+                    <input
+                      type="text"
+                      id="subject"
+                      name="subject"
+                      value={formData.subject}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Brief subject of your message"
+                    />
                   </div>
 
                   <div>
@@ -378,61 +412,17 @@ export default function ContactUsComponent() {
                       onChange={handleInputChange}
                       required
                       rows={6}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors resize-vertical"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-vertical"
                       placeholder="Please provide details about your inquiry..."
-                    />
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="newsletter"
-                      name="newsletter"
-                      checked={formData.newsletter}
-                      onChange={handleInputChange}
-                      className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                    />
-                    <label
-                      htmlFor="newsletter"
-                      className="ml-2 block text-sm text-gray-700"
-                    >
-                      I'd like to receive updates and promotional emails from
-                      Cherryl Concept
-                    </label>
+                    ></textarea>
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    {isSubmitting ? (
-                      <div className="flex items-center justify-center">
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Sending Message...
-                      </div>
-                    ) : (
-                      "Send Message"
-                    )}
+                    {isSubmitting ? <Spinner /> : "Send Message"}
                   </button>
                 </form>
               </div>
