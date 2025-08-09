@@ -83,8 +83,8 @@ const Header = () => {
         itemType="https://schema.org/Offer"
       >
         <p itemProp="description">
-          Free shipping on orders over ₦50,000 | 30-day returns |{" "}
-          <Link href="/sale" className="underline font-semibold" itemProp="url">
+          Free shipping on orders over ₦100,000 |{" "}
+          <Link href="/shop" className="underline font-semibold" itemProp="url">
             Shop Sale →
           </Link>
         </p>
@@ -139,14 +139,14 @@ const Header = () => {
           {/* Header Actions */}
           <div className="flex items-center space-x-4">
             {/* Search Button */}
-            <button
+            {/* <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               className={`p-2 rounded-full transition-colors duration-300 ${textColor} ${hoverBg}`}
               aria-label="Search"
               aria-expanded={isSearchOpen}
             >
               <FiSearch className="w-6 h-6" />
-            </button>
+            </button> */}
 
             {/* User Account */}
             <Link

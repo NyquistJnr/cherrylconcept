@@ -484,9 +484,9 @@ export default function ProductList() {
                     >
                       <div className="flex justify-between items-center">
                         <span>All Products</span>
-                        <span className="text-sm text-gray-500">
+                        {/* <span className="text-sm text-gray-500">
                           ({totalCount})
-                        </span>
+                        </span> */}
                       </div>
                     </button>
                     {categories.map((category) => (

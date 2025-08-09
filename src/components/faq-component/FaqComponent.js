@@ -15,7 +15,7 @@ const faqCategories = [
         id: 1,
         question: "How long does shipping take?",
         answer:
-          "We offer multiple shipping options: Standard shipping takes 5-7 business days and is free on orders over $50. Express shipping takes 2-3 business days for $9.99, and overnight shipping delivers the next business day for $19.99.",
+          "We offer multiple shipping options: Standard shipping takes 5-7 business days and is free on orders over ₦100,000. Express shipping takes 2-3 business days for ₦10,000, and overnight shipping delivers the next business day for ₦15,000.",
       },
       {
         id: 2,
@@ -46,7 +46,7 @@ const faqCategories = [
         id: 5,
         question: "What is your return policy?",
         answer:
-          "We offer a 30-day return policy on all unworn items in their original packaging with tags attached. Returns are free and easy - just use our online return portal to print a prepaid shipping label.",
+          "All items are final sale. We do not offer returns for any reason.",
       },
       {
         id: 6,
@@ -58,7 +58,7 @@ const faqCategories = [
         id: 7,
         question: "Can I exchange an item for a different size or color?",
         answer:
-          "Yes! You can exchange items for a different size or color within 30 days. Simply process a return for the original item and place a new order for your preferred option. If there's a price difference, we'll refund or charge accordingly.",
+          "No, all sales are final. We do not accept exchanges for any reason. This policy is strictly for hygiene purposes. Please review your order carefully before purchase.",
       },
       {
         id: 8,
@@ -437,16 +437,16 @@ export default function FAQComponent() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link
-                  href="/contact"
+                  href="/contact-us"
                   className="bg-white text-purple-600 px-8 py-4 rounded-full font-semibold hover:bg-gray-100 transition-colors min-w-[200px] text-center"
                 >
                   Contact Support
                 </Link>
                 <a
-                  href="tel:+15551234567"
+                  href="tel:+2348033132903"
                   className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white hover:text-purple-600 transition-colors min-w-[200px] text-center"
                 >
-                  Call: (555) 123-4567
+                  Call: (234) 803-313-2903
                 </a>
               </div>
             </div>
@@ -459,7 +459,7 @@ export default function FAQComponent() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               <Link
-                href="/shipping"
+                href="/#shipping"
                 className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow group"
               >
                 <div className="flex items-center space-x-4">
@@ -478,7 +478,7 @@ export default function FAQComponent() {
               </Link>
 
               <Link
-                href="/returns"
+                href="/#returns"
                 className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow group"
               >
                 <div className="flex items-center space-x-4">
@@ -493,7 +493,7 @@ export default function FAQComponent() {
               </Link>
 
               <Link
-                href="/size-guide"
+                href="/#size-guide"
                 className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow group"
               >
                 <div className="flex items-center space-x-4">

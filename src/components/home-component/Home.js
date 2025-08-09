@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 const featuredProducts = [
@@ -63,29 +64,33 @@ const collections = [
 const heroSlides = [
   {
     id: 1,
-    title: "Transform Your Hair Game",
-    subtitle: "Discover premium hair wear that combines style and comfort",
-    image: "/images/hairs/18.jpg",
-    cta: "Shop Collection",
+    title: "Adorn Your Crown",
+    subtitle:
+      "Experience the fusion of African heritage and contemporary style. Exquisite headwear for the modern woman, worldwide.",
+    image: "/images/hero/111.jpg",
+    cta: "Shop The Launch Collection",
   },
   {
     id: 2,
-    title: "New Spring Collection",
-    subtitle: "Fresh styles for the new season - Up to 30% off",
-    image: "/images/hairs/12.jpg",
-    cta: "Explore Now",
+    title: "Style Meets Protection",
+    subtitle:
+      "Beyond fashion. Our headwear is crafted with premium, breathable fabrics to protect your hair with grace and elegance.",
+    image: "/images/hero/222.jpg",
+    cta: "Discover Protective Styles",
   },
   {
     id: 3,
-    title: "Protect & Style",
-    subtitle: "Hair care meets fashion in our protective collection",
-    image: "/images/hairs/9.jpg",
-    cta: "Learn More",
+    title: "Wear Your Masterpiece",
+    subtitle:
+      "This is not just headwear. This is a story told in thread, color, and pattern. Your story.",
+    image: "/images/hero/333.jpg",
+    cta: "Discover the Gallery",
   },
 ];
 
 export default function HomeComponent() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const router = useRouter();
 
   // Auto-rotate hero slides
   useEffect(() => {
@@ -124,7 +129,10 @@ export default function HomeComponent() {
                     <p className="text-xl md:text-2xl mb-8 opacity-90 animate-fade-in-up animation-delay-200">
                       {slide.subtitle}
                     </p>
-                    <button className="bg-white text-black px-8 py-4 text-lg font-semibold rounded-full hover:bg-gray-100 transition-colors duration-300 animate-fade-in-up animation-delay-400">
+                    <button
+                      onClick={() => router.push("/shop")}
+                      className="bg-white text-black px-8 py-4 text-lg font-semibold rounded-full hover:bg-gray-100 transition-colors duration-300 animate-fade-in-up animation-delay-400"
+                    >
                       {slide.cta}
                     </button>
                   </div>
@@ -154,15 +162,15 @@ export default function HomeComponent() {
             <div className="flex flex-col md:flex-row items-center justify-between text-center md:text-left">
               <div className="mb-2 md:mb-0">
                 <span className="font-semibold">
-                  🎉 Spring Sale - Up to 40% Off Selected Items!
+                  🎉 August Meeting Sale - Up to 5% Off Selected Items!
                 </span>
               </div>
               <div className="flex items-center space-x-4">
                 <span className="text-sm">
-                  Free shipping on orders over $50
+                  Free shipping on orders over ₦100,000
                 </span>
                 <Link
-                  href="/sale"
+                  href="/shop"
                   className="bg-white/20 px-4 py-2 rounded-full text-sm font-medium hover:bg-white/30 transition-colors"
                 >
                   Shop Sale
@@ -294,7 +302,7 @@ export default function HomeComponent() {
                 Book Consultation
               </Link>
               <Link
-                href="/products"
+                href="/shop"
                 className="border-2 border-purple-600 text-purple-600 px-8 py-4 text-lg font-semibold rounded-full hover:bg-purple-50 transition-colors duration-300 min-w-[200px]"
               >
                 Shop Now

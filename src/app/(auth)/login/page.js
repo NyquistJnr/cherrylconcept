@@ -147,11 +147,12 @@ function LoginPage() {
               <p className="text-gray-600">
                 Sign in to your Cherryl Concept account
               </p>
-              {redirectUrl && (
+
+              <Link href="/">
                 <p className="text-sm text-purple-600 mt-2">
-                  Want to go to the home page? <Link href="/">Click here</Link>
+                  Want to go to the home page? Click here
                 </p>
-              )}
+              </Link>
             </div>
 
             {/* General Error Display */}

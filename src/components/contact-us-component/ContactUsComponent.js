@@ -8,34 +8,27 @@ const contactMethods = [
   {
     icon: "📞",
     title: "Phone Support",
-    description: "Speak with our friendly customer service team",
-    details: "+1 (555) 123-4567",
-    subtext: "Mon-Fri: 9AM-6PM EST",
-    action: "tel:+15551234567",
+    description: "Speak with our friendly customer service team.",
+    details: "+234 80 3313 2903",
+    subtext: "Mon-Fri: 9AM-6PM WAT",
+    action: "tel:+2348033132903",
   },
   {
     icon: "✉️",
     title: "Email Support",
-    description: "Send us a message and we'll respond within 24 hours",
-    details: "hello@headwear.com",
+    description: "Send us a message and we'll respond within 24 hours.",
+    details: "hello@cherrylconcept.com",
     subtext: "We reply within 24 hours",
-    action: "mailto:hello@headwear.com",
+    action: "mailto:hello@cherrylconcept.com",
   },
   {
     icon: "💬",
     title: "Live Chat",
-    description: "Get instant help from our support team",
-    details: "Start Live Chat",
-    subtext: "Available 24/7",
+    description: "Get instant help from our support team.",
+    details: "Coming Soon",
+    subtext: "Our live support will be available soon.",
     action: "#",
-  },
-  {
-    icon: "📍",
-    title: "Visit Our Store",
-    description: "Experience our products in person",
-    details: "123 Fashion Street, New York, NY 10001",
-    subtext: "Mon-Sat: 10AM-8PM, Sun: 12PM-6PM",
-    action: "https://maps.google.com/?q=123+Fashion+Street+New+York+NY",
+    isComingSoon: true,
   },
 ];
 
@@ -68,7 +61,7 @@ const faqs = [
   {
     question: "Do you offer bulk or wholesale pricing?",
     answer:
-      "Yes, we offer special pricing for bulk orders and wholesale customers. Please contact our business sales team at wholesale@headwear.com for more information.",
+      "Yes, we offer special pricing for bulk orders and wholesale customers. Please contact our business sales team at wholesale@cherrylconcept.com for more information.",
   },
 ];
 
@@ -404,7 +397,7 @@ export default function ContactUsComponent() {
                       className="ml-2 block text-sm text-gray-700"
                     >
                       I'd like to receive updates and promotional emails from
-                      HeadWear
+                      Cherryl Concept
                     </label>
                   </div>
 
@@ -455,15 +448,20 @@ export default function ContactUsComponent() {
                 Ways to Reach Us
               </h2>
               <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
-                Choose the contact method that works best for you
+                Choose the contact method that works best for you.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+            {/* The grid is now responsive for 3 items */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {contactMethods.map((method, index) => (
                 <div
                   key={index}
-                  className="bg-gray-50 rounded-2xl p-6 sm:p-8 text-center hover:shadow-lg transition-all duration-300 group"
+                  className={`bg-gray-50 rounded-2xl p-6 sm:p-8 text-center transition-all duration-300 group ${
+                    method.isComingSoon
+                      ? "opacity-60 cursor-not-allowed" // Style for disabled card
+                      : "hover:shadow-lg"
+                  }`}
                 >
                   <div className="text-4xl sm:text-5xl mb-4">{method.icon}</div>
                   <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
@@ -473,9 +471,14 @@ export default function ContactUsComponent() {
                     {method.description}
                   </p>
                   <div className="mb-2">
-                    {method.action.startsWith("http") ||
-                    method.action.startsWith("tel:") ||
-                    method.action.startsWith("mailto:") ? (
+                    {/* Conditional rendering for the action element */}
+                    {method.isComingSoon ? (
+                      <span className="text-gray-500 font-semibold">
+                        {method.details}
+                      </span>
+                    ) : method.action.startsWith("http") ||
+                      method.action.startsWith("tel:") ||
+                      method.action.startsWith("mailto:") ? (
                       <a
                         href={method.action}
                         className="text-purple-600 font-semibold hover:text-purple-700 transition-colors"
@@ -565,7 +568,7 @@ export default function ContactUsComponent() {
         </section>
 
         {/* Map & Store Info */}
-        <section className="py-12 sm:py-16 md:py-20 bg-gray-50">
+        {/*  <section className="py-12 sm:py-16 md:py-20 bg-gray-50">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-6xl mx-auto">
               <div className="text-center mb-12 sm:mb-16">
@@ -708,7 +711,7 @@ export default function ContactUsComponent() {
                 </div>
 
                 <div className="bg-gray-300 rounded-2xl overflow-hidden h-96 lg:h-auto">
-                  {/* Placeholder for map - replace with actual map component */}
+            
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center">
                       <svg
@@ -740,7 +743,7 @@ export default function ContactUsComponent() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* Business Hours & Additional Info */}
         <section className="py-12 sm:py-16 md:py-20 bg-white">
@@ -838,7 +841,7 @@ export default function ContactUsComponent() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center max-w-md sm:max-w-none mx-auto">
               <a
-                href="tel:+15551234567"
+                href="tel:+2348033132903"
                 className="w-full sm:w-auto bg-white text-purple-600 px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full hover:bg-gray-100 transition-colors duration-300 min-w-[200px] text-center inline-flex items-center justify-center"
               >
                 <svg
@@ -857,7 +860,7 @@ export default function ContactUsComponent() {
                 Call Now
               </a>
               <Link
-                href="/products"
+                href="/shop"
                 className="w-full sm:w-auto border-2 border-white text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-full hover:bg-white hover:text-purple-600 transition-colors duration-300 min-w-[200px] text-center"
               >
                 Browse Products

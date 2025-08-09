@@ -1,318 +1,234 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  FaInstagram,
-  FaFacebook,
-  FaTwitter,
-  FaPinterest,
-  FaTiktok,
-} from "react-icons/fa";
-import { MdEmail, MdPhone, MdAccessTime, MdLocationOn } from "react-icons/md";
+import { FaInstagram, FaFacebook, FaWhatsapp, FaTiktok } from "react-icons/fa";
+import { MdEmail, MdPhone, MdLocationOn } from "react-icons/md";
 
 const currentYear = new Date().getFullYear();
 
+// Added `isUpcoming` property to flag new features
 const footerLinks = {
   shop: [
     {
-      name: "All Products",
-      href: "/shop",
-      ariaLabel: "Browse all products",
-    },
-    {
       name: "New Arrivals",
-      href: "/collections/new-arrivals",
+      href: "/shop/new-arrivals",
       ariaLabel: "View new arrivals",
+      isUpcoming: true,
     },
     {
       name: "Best Sellers",
-      href: "/collections/best-sellers",
-      ariaLabel: "See best sellers",
+      href: "/shop/best-sellers",
+      ariaLabel: "See our best selling headwear",
+      isUpcoming: true,
     },
     {
-      name: "Sale Items",
-      href: "/collections/sale",
-      ariaLabel: "Shop sale items",
+      name: "Turbans",
+      href: "/collections/turbans",
+      ariaLabel: "Shop our Turban collection",
+      isUpcoming: true,
     },
     {
-      name: "Gift Cards",
-      href: "/gift-cards",
-      ariaLabel: "Purchase gift cards",
+      name: "Gele",
+      href: "/collections/gele",
+      ariaLabel: "Shop our Gele collection",
+      isUpcoming: true,
+    },
+    {
+      name: "Sale",
+      href: "/shop/sale",
+      ariaLabel: "Shop all sale items",
+      isUpcoming: true,
     },
   ],
-  support: [
+  help: [
     {
       name: "Contact Us",
       href: "/contact-us",
-      ariaLabel: "Contact our support",
-    },
-    { name: "Size Guide", href: "/size-guide", ariaLabel: "View size guide" },
-    {
-      name: "Care Instructions",
-      href: "/care-guide",
-      ariaLabel: "Read care instructions",
+      ariaLabel: "Contact our support team",
     },
     {
-      name: "Shipping Info",
-      href: "/shipping",
-      ariaLabel: "Check shipping information",
+      name: "Consultation",
+      href: "/consultation",
+      ariaLabel: "Book a styling consultation",
+      isUpcoming: true,
     },
     {
-      name: "Returns & Exchanges",
-      href: "/returns",
-      ariaLabel: "Learn about returns",
+      name: "Track My Order",
+      href: "/track",
+      ariaLabel: "Track your shipment",
     },
+    {
+      name: "Shipping & Returns",
+      href: "/shipping-returns",
+      ariaLabel: "Learn about our shipping and return policies",
+      isUpcoming: true,
+    },
+    { name: "FAQs", href: "/faq", ariaLabel: "Frequently Asked Questions" },
   ],
-  company: [
-    { name: "About Us", href: "/about", ariaLabel: "Learn about our company" },
-    { name: "Our Story", href: "/story", ariaLabel: "Read our story" },
-    { name: "Blog", href: "/blog", ariaLabel: "Visit our blog" },
+  about: [
     {
-      name: "Careers",
-      href: "/careers",
-      ariaLabel: "View career opportunities",
-    },
-    { name: "Press", href: "/press", ariaLabel: "See press coverage" },
-  ],
-  legal: [
-    {
-      name: "Privacy Policy",
-      href: "/privacy",
-      ariaLabel: "Read privacy policy",
+      name: "Our Story",
+      href: "/about-us",
+      ariaLabel: "Learn about our company and heritage",
     },
     {
-      name: "Terms of Service",
-      href: "/terms",
-      ariaLabel: "View terms of service",
+      name: "Blog",
+      href: "/blog",
+      ariaLabel: "Read our articles on style and culture",
+      isUpcoming: true,
     },
     {
-      name: "Cookie Policy",
-      href: "/cookies",
-      ariaLabel: "Learn about cookies",
-    },
-    {
-      name: "Accessibility",
-      href: "/accessibility",
-      ariaLabel: "Accessibility information",
+      name: "Press",
+      href: "/press",
+      ariaLabel: "See press coverage about our brand",
+      isUpcoming: true,
     },
   ],
 };
 
-// Social media links with react-icons
 const socialLinks = [
   {
     name: "Instagram",
-    href: "https://instagram.com/yourstore",
+    href: "https://www.instagram.com/nwaukwachiedozie",
     Icon: FaInstagram,
     ariaLabel: "Follow us on Instagram",
   },
   {
     name: "Facebook",
-    href: "https://facebook.com/yourstore",
+    href: "https://www.facebook.com/Cherrylconcept",
     Icon: FaFacebook,
     ariaLabel: "Like us on Facebook",
   },
   {
-    name: "Twitter",
-    href: "https://twitter.com/yourstore",
-    Icon: FaTwitter,
-    ariaLabel: "Follow us on Twitter",
+    name: "WhatsApp",
+    href: "https://wa.me/2348033132903",
+    Icon: FaWhatsapp,
+    ariaLabel: "Chat with us on WhatsApp",
   },
-  {
-    name: "Pinterest",
-    href: "https://pinterest.com/yourstore",
-    Icon: FaPinterest,
-    ariaLabel: "Follow us on Pinterest",
-  },
-  {
+  /*   {
     name: "TikTok",
-    href: "https://tiktok.com/@yourstore",
+    href: "https://tiktok.com/@yourbrand",
     Icon: FaTiktok,
     ariaLabel: "Follow us on TikTok",
-  },
+  }, */
 ];
 
-// Contact information sections with react-icons
-const contactInfo = [
-  {
-    title: "Contact Us",
-    content: (
-      <>
-        <span className="flex items-center gap-2">
-          <MdEmail className="inline" /> hello@hairwear.com
-        </span>
-        <span className="flex items-center gap-2">
-          <MdPhone className="inline" /> +1 (555) 123-4567
-        </span>
-      </>
-    ),
-    Icon: MdEmail,
-    ariaLabel: "Contact information",
-  },
-  {
-    title: "Store Hours",
-    content: (
-      <>
-        <span>Mon - Fri: 9AM - 6PM</span>
-        <span>Sat - Sun: 10AM - 4PM</span>
-      </>
-    ),
-    Icon: MdAccessTime,
-    ariaLabel: "Store opening hours",
-  },
-  {
-    title: "Address",
-    content: (
-      <>
-        <span className="flex items-center gap-2">
-          <MdLocationOn className="inline" /> 123 Fashion Street
-        </span>
-        <span>New York, NY 10001</span>
-      </>
-    ),
-    Icon: MdLocationOn,
-    ariaLabel: "Store location address",
-  },
-];
+// Reusable component for link lists to keep code DRY
+function FooterLinkColumn({ title, links }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold tracking-wider uppercase text-gray-500 mb-4">
+        {title}
+      </h3>
+      <ul className="space-y-3">
+        {links.map(({ name, href, ariaLabel, isUpcoming }) => (
+          <li key={name}>
+            <Link
+              href={href}
+              className="text-gray-600 hover:text-purple-700 transition-colors inline-flex items-center"
+              aria-label={ariaLabel}
+            >
+              {name}
+              {isUpcoming && (
+                <span className="ml-2 text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                  Upcoming
+                </span>
+              )}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function Footer() {
   return (
-    <footer className="bg-white text-black">
-      <div className="container mx-auto px-4 py-16">
-        {/* Main footer grid layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          {/* Brand/Logo section */}
-          <div className="lg:col-span-2">
+    <footer className="bg-gray-50 text-gray-800">
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-8 mb-10 pb-10 border-b border-gray-200">
+          <div className="text-center lg:text-left">
+            <h2 className="text-2xl font-bold mb-2">Join Our Style List</h2>
+            <p className="text-gray-600">
+              Get exclusive access to new arrivals, special offers, and styling
+              tips.
+            </p>
+          </div>
+          <form className="flex w-full max-w-md">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              className="w-full px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+              aria-label="Email address"
+            />
+            <button
+              type="submit"
+              className="px-6 py-2 bg-gray-800 text-white font-semibold rounded-r-md hover:bg-purple-700 transition-colors"
+            >
+              Subscribe
+            </button>
+          </form>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="md:col-span-2 lg:col-span-1">
             <Link
               href="/"
-              className="flex items-center space-x-2 mb-6"
-              aria-label="HairWear Homepage"
+              className="inline-block mb-4"
+              aria-label="Cherryl Concept Homepage"
             >
-              <div className="relative w-25 h-25">
-                <Image
-                  src="/logo/cherryconcept1_.png"
-                  alt="HairWear Logo"
-                  fill
-                  className="object-contain"
-                  sizes="40px"
-                  priority
-                />
-              </div>
+              <Image
+                src="/logo/cherryconcept1_.png"
+                alt="Cherryl Concept Logo"
+                width={120}
+                height={40}
+                className="object-contain"
+              />
             </Link>
-
-            <p className="text-black mb-6 max-w-md">
-              Transforming hair care with premium accessories that combine
-              style, comfort, and protection. Made with love for every hair type
-              and texture.
+            <p className="text-gray-600 mb-6 text-sm">
+              Wearable art from Cherry Concept. Discover handcrafted headwear
+              for the discerning woman worldwide
             </p>
-
-            {/* Social media links */}
-            <div className="flex space-x-4">
+            <div className="flex space-x-3">
               {socialLinks.map(({ name, href, Icon, ariaLabel }) => (
                 <a
                   key={name}
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 bg-black text-white rounded-full hover:bg-purple-600 transition-colors duration-300"
+                  className="p-2 text-gray-500 rounded-full hover:bg-gray-200 hover:text-purple-700 transition-colors"
                   aria-label={ariaLabel}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-6 h-6" />
                 </a>
               ))}
             </div>
           </div>
 
-          {/* Shop links column */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Shop</h3>
-            <ul className="space-y-2">
-              {footerLinks.shop.map(({ name, href, ariaLabel }) => (
-                <li key={name}>
-                  <Link
-                    href={href}
-                    className="text-black hover:text-purple-600 transition-colors duration-300"
-                    aria-label={ariaLabel}
-                  >
-                    {name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support links column */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Support</h3>
-            <ul className="space-y-2">
-              {footerLinks.support.map(({ name, href, ariaLabel }) => (
-                <li key={name}>
-                  <Link
-                    href={href}
-                    className="text-black hover:text-purple-600 transition-colors duration-300"
-                    aria-label={ariaLabel}
-                  >
-                    {name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company links column */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Company</h3>
-            <ul className="space-y-2">
-              {footerLinks.company.map(({ name, href, ariaLabel }) => (
-                <li key={name}>
-                  <Link
-                    href={href}
-                    className="text-black hover:text-purple-600 transition-colors duration-300"
-                    aria-label={ariaLabel}
-                  >
-                    {name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Contact information section */}
-        <div className="border-t border-gray-800 mt-12 pt-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            {contactInfo.map(({ title, content, Icon, ariaLabel }) => (
-              <div key={title} className="text-center md:text-left">
-                <h4 className="font-semibold mb-2 flex items-center justify-center md:justify-start gap-2">
-                  <Icon className="w-5 h-5" />
-                  {title}
-                </h4>
-                <div className="text-black space-y-1" aria-label={ariaLabel}>
-                  {content}
-                </div>
-              </div>
-            ))}
-          </div>
+          <FooterLinkColumn title="Shop" links={footerLinks.shop} />
+          <FooterLinkColumn title="Help" links={footerLinks.help} />
+          <FooterLinkColumn title="About Us" links={footerLinks.about} />
         </div>
       </div>
 
-      {/* Bottom footer with copyright and legal links */}
-      <div className="border-t border-gray-800">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="text-black text-sm">
-              © {currentYear} Cherryl Concept. All rights reserved.
-            </div>
-            <div className="flex flex-wrap justify-center md:justify-end gap-4 md:gap-6 text-sm">
-              {footerLinks.legal.map(({ name, href, ariaLabel }) => (
-                <Link
-                  key={name}
-                  href={href}
-                  className="text-black hover:text-purple-600 transition-colors duration-300"
-                  aria-label={ariaLabel}
-                >
-                  {name}
-                </Link>
-              ))}
+      <div className="bg-gray-100">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex flex-col md:flex-row justify-between items-center text-sm">
+            <p className="text-gray-500 mb-2 md:mb-0">
+              © {currentYear} Cherryl Concept. All Rights Reserved.
+            </p>
+            <div className="flex gap-4">
+              <Link
+                href="/privacy-policy"
+                className="text-gray-500 hover:text-purple-700"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="/terms-of-service"
+                className="text-gray-500 hover:text-purple-700"
+              >
+                Terms of Service
+              </Link>
             </div>
           </div>
         </div>

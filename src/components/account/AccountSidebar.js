@@ -27,7 +27,7 @@ export default function AccountSidebar({ activeTab, onTabChange }) {
     { id: "orders", label: "Order History", icon: FiShoppingBag },
     { id: "wishlist", label: "Wishlist", icon: FiHeart },
     { id: "addresses", label: "Addresses", icon: FiMapPin },
-    { id: "payment", label: "Payment Methods", icon: FiCreditCard },
+    /* { id: "payment", label: "Payment Methods", icon: FiCreditCard }, */
     { id: "settings", label: "Account Settings", icon: FiSettings },
   ];
 

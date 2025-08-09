@@ -15,7 +15,7 @@ export async function fetchProducts(params = {}) {
     const response = await fetch(url, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
-      cache: "no-store",
+      next: { revalidate: 3600 },
     });
 
     if (!response.ok) {
