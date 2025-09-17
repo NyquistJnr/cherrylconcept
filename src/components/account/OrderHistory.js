@@ -85,9 +85,9 @@ export default function OrderHistory() {
 
   const formatCurrency = (amount) => {
     const numAmount = parseFloat(amount) / 100; // Convert from cents
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-NG", {
       style: "currency",
-      currency: "USD",
+      currency: "NGN",
     }).format(numAmount);
   };
 

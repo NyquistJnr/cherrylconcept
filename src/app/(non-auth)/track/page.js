@@ -76,9 +76,9 @@ export default function TrackOrderPage() {
 
   const formatCurrency = (amount) => {
     const numAmount = parseFloat(amount) / 100;
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-NG", {
       style: "currency",
-      currency: "USD",
+      currency: "NGN",
     }).format(numAmount);
   };
 
