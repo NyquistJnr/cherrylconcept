@@ -44,6 +44,7 @@ const collections = [
     description: "Discover our latest hair wear collection",
     image: "/images/hairs/5.jpg",
     itemCount: 24,
+    url: "/shop?is_new=true",
   },
   {
     id: 2,
@@ -51,13 +52,15 @@ const collections = [
     description: "Customer favorites that never go out of style",
     image: "/images/hairs/7.jpg",
     itemCount: 18,
+    url: "/shop?is_best_seller=true",
   },
   {
     id: 3,
-    title: "Premium Collection",
+    title: "Popular Collection",
     description: "Luxury hair accessories for special occasions",
     image: "/images/hairs/21.jpg",
     itemCount: 12,
+    url: "/shop?is_popular=true",
   },
 ];
 
@@ -162,7 +165,7 @@ export default function HomeComponent() {
             <div className="flex flex-col md:flex-row items-center justify-between text-center md:text-left">
               <div className="mb-2 md:mb-0">
                 <span className="font-semibold">
-                  🎉 August Meeting Sale - Up to 5% Off Selected Items!
+                  🎉 November Black Market Sale - Up to 5% Off Selected Items!
                 </span>
               </div>
               <div className="flex items-center space-x-4">
@@ -218,9 +221,12 @@ export default function HomeComponent() {
                       <span className="text-sm opacity-80">
                         {collection.itemCount} items
                       </span>
-                      <span className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full">
+                      <Link
+                        href={collection.url}
+                        className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full"
+                      >
                         Shop Now →
-                      </span>
+                      </Link>
                     </div>
                   </div>
                 </div>
