@@ -84,11 +84,11 @@ function OrderDetailPage() {
   };
 
   const formatCurrency = (amount) => {
-    const numAmount = parseFloat(amount) / 100;
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
-    }).format(numAmount);
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   const formatDate = (dateString) => {
