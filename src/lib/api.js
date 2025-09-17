@@ -46,3 +46,39 @@ export async function fetchCategories() {
     return { data: [] };
   }
 }
+
+export async function fetchHomepageCollections() {
+  const url = `${API_BASE_URL}/products/feature-collections/`;
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching homepage collections:", error);
+    return { data: [] };
+  }
+}
+
+export async function fetchHomeFeaturedProducts() {
+  const url = `${API_BASE_URL}/products/home-featured-products/`;
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching home featured products:", error);
+    return { data: [] };
+  }
+}

@@ -145,8 +145,6 @@ export default function ProductList() {
     keepPreviousData: true,
   });
 
-  console.log("hello there!!!!");
-
   const { isLoading, isError, data: productsData, isFetching } = productsQuery;
   const products = productsData?.data?.products || [];
   const pagination = productsData?.data?.pagination || {};

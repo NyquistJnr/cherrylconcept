@@ -4,65 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-
-const featuredProducts = [
-  {
-    id: 1,
-    name: "Luxury Silk Hair Wrap",
-    price: 49.99,
-    originalPrice: 69.99,
-    image: "/images/hairs/7.jpg",
-    badge: "Best Seller",
-  },
-  {
-    id: 2,
-    name: "Velvet Hair Scrunchie Set",
-    price: 24.99,
-    image: "/images/hairs/14.jpg",
-    badge: "New",
-  },
-  {
-    id: 3,
-    name: "Satin Hair Bonnet",
-    price: 19.99,
-    image: "/images/hairs/20.jpg",
-    badge: "Popular",
-  },
-  {
-    id: 4,
-    name: "Designer Hair Headband",
-    price: 34.99,
-    image: "/images/hairs/12.jpg",
-    badge: "Trending",
-  },
-];
-
-const collections = [
-  {
-    id: 1,
-    title: "New Arrivals",
-    description: "Discover our latest hair wear collection",
-    image: "/images/hairs/5.jpg",
-    itemCount: 24,
-    url: "/shop?is_new=true",
-  },
-  {
-    id: 2,
-    title: "Best Sellers",
-    description: "Customer favorites that never go out of style",
-    image: "/images/hairs/7.jpg",
-    itemCount: 18,
-    url: "/shop?is_best_seller=true",
-  },
-  {
-    id: 3,
-    title: "Popular Collection",
-    description: "Luxury hair accessories for special occasions",
-    image: "/images/hairs/21.jpg",
-    itemCount: 12,
-    url: "/shop?is_popular=true",
-  },
-];
+import FeaturedCollections from "./FeaturedCollection";
+import FeaturedProducts from "./FeaturedProducts";
 
 const heroSlides = [
   {
@@ -184,111 +127,10 @@ export default function HomeComponent() {
         </section>
 
         {/* Featured Collections */}
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Featured Collections
-              </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Curated collections for every style and occasion
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {collections.map((collection) => (
-                <div
-                  key={collection.id}
-                  className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 cursor-pointer"
-                >
-                  <div className="aspect-[4/5] relative">
-                    <Image
-                      src={collection.image}
-                      alt={collection.title}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                    <h3 className="text-2xl font-bold mb-2">
-                      {collection.title}
-                    </h3>
-                    <p className="text-gray-200 mb-2">
-                      {collection.description}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm opacity-80">
-                        {collection.itemCount} items
-                      </span>
-                      <Link
-                        href={collection.url}
-                        className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full"
-                      >
-                        Shop Now →
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <FeaturedCollections />
 
         {/* Featured Products */}
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                Featured Products
-              </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Handpicked favorites that our customers love
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden"
-                >
-                  <div className="relative aspect-square overflow-hidden">
-                    {product.badge && (
-                      <span className="absolute top-3 left-3 z-10 bg-black text-white px-3 py-1 text-xs font-semibold rounded-full">
-                        {product.badge}
-                      </span>
-                    )}
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="font-semibold text-lg mb-2 text-gray-900">
-                      {product.name}
-                    </h3>
-                    <div className="flex items-center space-x-2 mb-4">
-                      <span className="text-2xl font-bold text-gray-900">
-                        ${product.price}
-                      </span>
-                      {product.originalPrice && (
-                        <span className="text-lg text-gray-500 line-through">
-                          ${product.originalPrice}
-                        </span>
-                      )}
-                    </div>
-                    <button className="w-full bg-black text-white py-3 rounded-full font-semibold hover:bg-gray-800 transition-colors duration-300">
-                      Add to Cart
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <FeaturedProducts />
 
         {/* Call-to-Action Section */}
         <section className="py-20 bg-white">
