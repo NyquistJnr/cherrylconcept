@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FiMail,
   FiLock,
@@ -28,7 +30,6 @@ export default function ForgotPasswordComponent() {
   const [resetToken, setResetToken] = useState("");
   const [countdown, setCountdown] = useState(0);
 
-  // Reset password form data
   const [resetData, setResetData] = useState({
     password: "",
     confirmPassword: "",
@@ -37,7 +38,6 @@ export default function ForgotPasswordComponent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
-  // Check if we have a reset token in URL
   useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
@@ -46,7 +46,6 @@ export default function ForgotPasswordComponent() {
     }
   }, [searchParams]);
 
-  // Countdown timer for resend
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -78,111 +77,43 @@ export default function ForgotPasswordComponent() {
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
-
-    if (!email) {
-      setErrors({ email: "Email is required" });
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(email)) {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
       setErrors({ email: "Please enter a valid email" });
       return;
     }
-
     setIsLoading(true);
     setErrors({});
-
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/auth/forgot-password/`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email }),
         }
       );
-
       const data = await response.json();
-
       if (response.ok) {
-        // Email sent successfully
-        console.log("Password reset email sent:", data);
-
-        // Show success toast
         toast.success(
-          "Password reset email sent successfully! Check your inbox.",
-          {
-            position: "top-right",
-            autoClose: 4000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          }
+          "Password reset email sent successfully! Check your inbox."
         );
-
         setCurrentStep("sent");
-        setCountdown(60); // Start 60 second countdown
+        setCountdown(60);
       } else {
-        // Handle API errors
-        if (data.errors) {
-          if (data.errors.email) {
-            const errorMessage = Array.isArray(data.errors.email)
-              ? data.errors.email[0]
-              : data.errors.email;
-            setErrors({ email: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else if (data.errors.non_field_errors) {
-            const errorMessage = data.errors.non_field_errors[0];
-            setErrors({ general: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          } else {
-            const errorMessage =
-              "Failed to send reset email. Please try again.";
-            setErrors({ general: errorMessage });
-            toast.error(errorMessage, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          }
-        } else if (data.message) {
-          setErrors({ general: data.message });
-          toast.error(data.message, {
-            position: "top-right",
-            autoClose: 5000,
-          });
-        } else {
-          const errorMessage = "Failed to send reset email. Please try again.";
-          setErrors({ general: errorMessage });
-          toast.error(errorMessage, {
-            position: "top-right",
-            autoClose: 5000,
-          });
-        }
+        const errorMessage =
+          data.errors?.email?.[0] ||
+          data.errors?.non_field_errors?.[0] ||
+          data.message ||
+          "Failed to send reset email.";
+        setErrors({ general: errorMessage });
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Forgot password error:", error);
       const errorMessage =
         "Network error. Please check your connection and try again.";
       setErrors({ general: errorMessage });
-      toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -378,398 +309,332 @@ export default function ForgotPasswordComponent() {
 
   const handleResetDataChange = (e) => {
     const { name, value } = e.target;
-    setResetData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
+    setResetData((prev) => ({ ...prev, [name]: value }));
     if (name === "password") {
       calculatePasswordStrength(value);
     }
-
-    // Clear errors when user types
     if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
+  const formVariants = {
+    hidden: { opacity: 0, x: -30 },
+    visible: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: 30 },
+  };
+
   return (
-    <>
-      <main className="pt-[30px] min-h-screen bg-gray-50 flex items-center justify-center py-12">
-        <div className="max-w-md w-full mx-4">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            {/* Back to Login */}
-            <div className="mb-6">
-              <Link
-                href="/login"
-                className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                <FiArrowLeft className="w-4 h-4 mr-2" />
-                Back to Sign In
-              </Link>
-            </div>
+    <div className="min-h-screen w-full bg-gray-50 lg:grid lg:grid-cols-2">
+      {/* --- Left Panel: The Form Steps --- */}
+      <div className="flex flex-col items-center justify-center p-6 sm:p-12">
+        <div className="max-w-md w-full">
+          <div className="mb-6">
+            <Link
+              href="/login"
+              className="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 group"
+            >
+              <FiArrowLeft className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1" />
+              Back to Sign In
+            </Link>
+          </div>
 
-            {/* Step 1: Enter Email */}
-            {currentStep === "email" && (
-              <>
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FiMail className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    Forgot Password?
-                  </h1>
-                  <p className="text-gray-600">
-                    No worries! Enter your email address and we'll send you a
-                    link to reset your password.
-                  </p>
-                </div>
-
-                {errors.general && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-center space-x-2">
-                      <FiAlertCircle className="w-4 h-4 text-red-600" />
-                      <span className="text-sm text-red-700">
-                        {errors.general}
-                      </span>
+          <div className="bg-white rounded-2xl shadow-xl p-8 min-h-[500px] flex flex-col">
+            <AnimatePresence mode="wait">
+              {/* Step 1: Enter Email */}
+              {currentStep === "email" && (
+                <motion.div
+                  key="email"
+                  variants={formVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiMail className="w-8 h-8 text-purple-600" />
                     </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      Forgot Password?
+                    </h1>
+                    <p className="text-gray-600">
+                      Enter your email and we'll send you a reset link.
+                    </p>
                   </div>
-                )}
-
-                <form onSubmit={handleEmailSubmit} className="space-y-6">
-                  <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiMail className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        type="email"
-                        id="email"
-                        value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          if (errors.email)
-                            setErrors((prev) => ({ ...prev, email: "" }));
-                        }}
-                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${
-                          errors.email
-                            ? "border-red-300 bg-red-50"
-                            : "border-gray-300"
-                        }`}
-                        placeholder="Enter your email address"
-                      />
-                    </div>
-                    {errors.email && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                        <FiAlertCircle className="w-4 h-4" />
-                        <span>{errors.email}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                  >
-                    {isLoading ? (
-                      <>
-                        <FiLoader className="w-4 h-4 mr-2 animate-spin" />
-                        Sending Reset Link...
-                      </>
-                    ) : (
-                      "Send Reset Link"
-                    )}
-                  </button>
-                </form>
-
-                <div className="mt-8 text-center">
-                  <p className="text-sm text-gray-600">
-                    Remember your password?{" "}
-                    <Link
-                      href="/login"
-                      className="font-medium text-purple-600 hover:text-purple-700"
-                    >
-                      Sign in here
-                    </Link>
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Step 2: Email Sent */}
-            {currentStep === "sent" && (
-              <>
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FiCheck className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    Check Your Email
-                  </h1>
-                  <p className="text-gray-600 mb-4">
-                    We've sent a password reset link to:
-                  </p>
-                  <p className="text-lg font-medium text-gray-900 bg-gray-50 px-4 py-2 rounded-lg">
-                    {email}
-                  </p>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <div className="flex items-start space-x-3">
-                    <FiClock className="w-5 h-5 text-blue-600 mt-0.5" />
-                    <div className="text-sm text-blue-700">
-                      <p className="font-medium mb-1">What to do next:</p>
-                      <ul className="space-y-1">
-                        <li>• Check your email inbox for the reset link</li>
-                        <li>• The link will expire in 1 hour for security</li>
-                        <li>• Check your spam folder if you don't see it</li>
-                        <li>• Click the link to set a new password</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <button
-                    onClick={handleResendEmail}
-                    disabled={countdown > 0 || isLoading}
-                    className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                  >
-                    {isLoading ? (
-                      <>
-                        <FiLoader className="w-4 h-4 mr-2 animate-spin" />
-                        Resending...
-                      </>
-                    ) : countdown > 0 ? (
-                      <>
-                        <FiClock className="w-4 h-4 mr-2" />
-                        Resend in {countdown}s
-                      </>
-                    ) : (
-                      <>
-                        <FiRefreshCw className="w-4 h-4 mr-2" />
-                        Resend Email
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => setCurrentStep("email")}
-                    className="w-full flex justify-center items-center py-3 px-4 border border-purple-600 rounded-lg shadow-sm text-sm font-medium text-purple-600 bg-white hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-300"
-                  >
-                    Try Different Email
-                  </button>
-                </div>
-
-                <div className="mt-8 text-center">
-                  <p className="text-sm text-gray-600">
-                    Need help?{" "}
-                    <Link
-                      href="/contact"
-                      className="font-medium text-purple-600 hover:text-purple-700"
-                    >
-                      Contact Support
-                    </Link>
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Step 3: Reset Password */}
-            {currentStep === "reset" && (
-              <>
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FiShield className="w-8 h-8 text-purple-600" />
-                  </div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                    Set New Password
-                  </h1>
-                  <p className="text-gray-600">
-                    Create a strong password for your HeadWear account
-                  </p>
-                </div>
-
-                {errors.general && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                    <div className="flex items-center space-x-2">
-                      <FiAlertCircle className="w-4 h-4 text-red-600" />
-                      <span className="text-sm text-red-700">
-                        {errors.general}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <form onSubmit={handleResetSubmit} className="space-y-6">
-                  {/* New Password */}
-                  <div>
-                    <label
-                      htmlFor="password"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      New Password
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiLock className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        id="password"
-                        name="password"
-                        value={resetData.password}
-                        onChange={handleResetDataChange}
-                        className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${
-                          errors.password
-                            ? "border-red-300 bg-red-50"
-                            : "border-gray-300"
-                        }`}
-                        placeholder="Create a strong password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  {errors.general && (
+                    <p className="text-sm text-red-600 text-center mb-4">
+                      {errors.general}
+                    </p>
+                  )}
+                  <form onSubmit={handleEmailSubmit} className="space-y-6">
+                    <div>
+                      <label
+                        htmlFor="email"
+                        className="block text-sm font-medium text-gray-700 mb-2"
                       >
-                        {showPassword ? (
-                          <FiEyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        ) : (
-                          <FiEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Password Strength Indicator */}
-                    {resetData.password && (
-                      <div className="mt-2">
-                        <div className="flex items-center space-x-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
-                              style={{
-                                width: `${(passwordStrength / 5) * 100}%`,
-                              }}
-                            ></div>
-                          </div>
-                          <span className="text-sm text-gray-600">
-                            {getPasswordStrengthText()}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500">
-                          Use 8+ characters with letters, numbers, and symbols
-                        </div>
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <FiMail className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="email"
+                          id="email"
+                          value={email}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (errors.email) setErrors({});
+                          }}
+                          className={`block w-full pl-10 pr-3 py-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                            errors.email ? "border-red-300" : "border-gray-300"
+                          }`}
+                          placeholder="Enter your email address"
+                        />
                       </div>
-                    )}
-
-                    {errors.password && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                        <FiAlertCircle className="w-4 h-4" />
-                        <span>{errors.password}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div>
-                    <label
-                      htmlFor="confirmPassword"
-                      className="block text-sm font-medium text-gray-700 mb-2"
-                    >
-                      Confirm New Password
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <FiLock className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        value={resetData.confirmPassword}
-                        onChange={handleResetDataChange}
-                        className={`block w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${
-                          errors.confirmPassword
-                            ? "border-red-300 bg-red-50"
-                            : "border-gray-300"
-                        }`}
-                        placeholder="Confirm your new password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      >
-                        {showConfirmPassword ? (
-                          <FiEyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        ) : (
-                          <FiEye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                        )}
-                      </button>
-                    </div>
-                    {resetData.confirmPassword &&
-                      resetData.password === resetData.confirmPassword && (
-                        <p className="mt-1 text-sm text-green-600 flex items-center space-x-1">
-                          <FiCheck className="w-4 h-4" />
-                          <span>Passwords match</span>
+                      {errors.email && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.email}
                         </p>
                       )}
-                    {errors.confirmPassword && (
-                      <p className="mt-1 text-sm text-red-600 flex items-center space-x-1">
-                        <FiAlertCircle className="w-4 h-4" />
-                        <span>{errors.confirmPassword}</span>
-                      </p>
-                    )}
-                  </div>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full flex justify-center items-center py-3 px-4 rounded-lg font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <FiLoader className="w-5 h-5 mr-2 animate-spin" />{" "}
+                          Sending Link...
+                        </>
+                      ) : (
+                        "Send Reset Link"
+                      )}
+                    </button>
+                  </form>
+                </motion.div>
+              )}
 
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                  >
-                    {isLoading ? (
-                      <>
-                        <FiLoader className="w-4 h-4 mr-2 animate-spin" />
-                        Updating Password...
-                      </>
-                    ) : (
-                      "Update Password"
-                    )}
-                  </button>
-                </form>
-
-                <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <FiShield className="w-5 h-5 text-green-600 mt-0.5" />
-                    <div className="text-sm text-green-700">
-                      <p className="font-medium mb-1">Security Tips:</p>
-                      <ul className="space-y-1">
-                        <li>• Use a unique password you don't use elsewhere</li>
-                        <li>• Consider using a password manager</li>
-                        <li>
-                          • Enable two-factor authentication for extra security
-                        </li>
-                      </ul>
+              {/* Step 2: Email Sent */}
+              {currentStep === "sent" && (
+                <motion.div
+                  key="sent"
+                  variants={formVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiCheck className="w-8 h-8 text-green-600" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      Check Your Email
+                    </h1>
+                    <p className="text-gray-600 mb-4">
+                      We've sent a password reset link to:
+                    </p>
+                    <p className="text-lg font-medium text-gray-900 bg-gray-100 px-4 py-2 rounded-lg">
+                      {email}
+                    </p>
+                    <div className="mt-6 space-y-4">
+                      <button
+                        onClick={handleResendEmail}
+                        disabled={countdown > 0 || isLoading}
+                        className="w-full flex justify-center items-center py-3 px-4 border rounded-lg font-medium bg-white hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <FiLoader className="w-5 h-5 mr-2 animate-spin" />
+                        ) : countdown > 0 ? (
+                          <FiClock className="w-5 h-5 mr-2" />
+                        ) : (
+                          <FiRefreshCw className="w-5 h-5 mr-2" />
+                        )}
+                        {countdown > 0
+                          ? `Resend in ${countdown}s`
+                          : "Resend Email"}
+                      </button>
+                      <button
+                        onClick={() => setCurrentStep("email")}
+                        className="w-full text-purple-600 font-medium hover:underline"
+                      >
+                        Try a Different Email
+                      </button>
                     </div>
                   </div>
-                </div>
-              </>
-            )}
+                </motion.div>
+              )}
+
+              {/* Step 3: Reset Password */}
+              {currentStep === "reset" && (
+                <motion.div
+                  key="reset"
+                  variants={formVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiShield className="w-8 h-8 text-purple-600" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                      Set New Password
+                    </h1>
+                    <p className="text-gray-600">
+                      Create a new, strong password for your account.
+                    </p>
+                  </div>
+                  {errors.general && (
+                    <p className="text-sm text-red-600 text-center mb-4">
+                      {errors.general}
+                    </p>
+                  )}
+                  <form onSubmit={handleResetSubmit} className="space-y-4">
+                    {/* (New Password and Confirm Password fields with all logic) */}
+                    <div>
+                      <label
+                        htmlFor="password"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <FiLock className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          id="password"
+                          name="password"
+                          value={resetData.password}
+                          onChange={handleResetDataChange}
+                          className={`block w-full pl-10 pr-10 py-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                            errors.password
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        >
+                          {showPassword ? (
+                            <FiEyeOff className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <FiEye className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                      {resetData.password && (
+                        <div className="mt-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${getPasswordStrengthColor()}`}
+                                style={{
+                                  width: `${(passwordStrength / 5) * 100}%`,
+                                }}
+                              ></div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-600">
+                              {getPasswordStrengthText()}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {errors.password && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.password}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="confirmPassword"
+                        className="block text-sm font-medium text-gray-700 mb-2"
+                      >
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <FiLock className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          value={resetData.confirmPassword}
+                          onChange={handleResetDataChange}
+                          className={`block w-full pl-10 pr-10 py-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                            errors.confirmPassword
+                              ? "border-red-300"
+                              : "border-gray-300"
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        >
+                          {showConfirmPassword ? (
+                            <FiEyeOff className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <FiEye className="h-5 w-5 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                      {errors.confirmPassword && (
+                        <p className="mt-1 text-xs text-red-600">
+                          {errors.confirmPassword}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full flex justify-center items-center py-3 px-4 rounded-lg font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <FiLoader className="w-5 h-5 mr-2 animate-spin" />{" "}
+                          Updating Password...
+                        </>
+                      ) : (
+                        "Update Password"
+                      )}
+                    </button>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-      </main>
-    </>
+      </div>
+
+      {/* --- Right Panel: The Image --- */}
+      <div className="hidden lg:block relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+        <Image
+          src="/images/hero/forgot.jpeg"
+          alt="Account security"
+          fill
+          priority
+          className="object-cover"
+        />
+        <div className="relative h-full flex flex-col justify-end p-12 text-white">
+          <h2 className="text-4xl font-bold leading-tight mb-4">
+            Security is Our
+            <br />
+            Top Priority.
+          </h2>
+          <p className="text-lg text-gray-200">
+            Follow the steps to securely regain access to your account. We're
+            here to help.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }

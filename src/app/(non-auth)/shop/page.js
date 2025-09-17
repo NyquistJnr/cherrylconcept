@@ -3,8 +3,10 @@ import {
   QueryClient,
   HydrationBoundary,
 } from "@tanstack/react-query";
+import { Suspense } from "react";
 import { fetchProducts, fetchCategories } from "@/lib/api";
-import ProductList from "@/components/shop-component/ShopComponent";
+import ShopPageClient from "@/components/shop-component/ShopPageClient";
+import ShopSkeleton from "@/components/shop-component/ShopSkeleton";
 
 export default async function ShopPage() {
   const queryClient = new QueryClient();
@@ -17,9 +19,10 @@ export default async function ShopPage() {
         selectedCategory: "all",
         selectedPriceRange: "all",
         sortBy: "featured",
+        page: 1,
       },
     ],
-    queryFn: () => fetchProducts(),
+    queryFn: () => fetchProducts({ page: 1 }),
   });
 
   await queryClient.prefetchQuery({
@@ -31,7 +34,9 @@ export default async function ShopPage() {
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <ProductList />
+      <Suspense fallback={<ShopSkeleton />}>
+        <ShopPageClient />
+      </Suspense>
     </HydrationBoundary>
   );
 }

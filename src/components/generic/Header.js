@@ -11,6 +11,7 @@ import {
   FiMenu,
   FiX,
   FiChevronDown,
+  FiLogIn,
 } from "react-icons/fi";
 import { useCart } from "@/contexts/CartContext";
 
@@ -20,9 +21,27 @@ const Header = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const pathname = usePathname();
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   // Get cart data from context
   const { getCartTotals } = useCart();
   const { itemCount } = getCartTotals();
+
+  useEffect(() => {
+    // This code only runs in the browser after the component has mounted.
+    const checkAuthStatus = () => {
+      const userId = localStorage.getItem("userId");
+      setIsLoggedIn(!!userId);
+    };
+    checkAuthStatus();
+
+    // Optional: Listen for storage changes to update UI in real-time
+    // if another tab logs in or out.
+    window.addEventListener("storage", checkAuthStatus);
+    return () => {
+      window.removeEventListener("storage", checkAuthStatus);
+    };
+  }, []);
 
   // Memoize navigation items to prevent unnecessary re-renders
   const navigationItems = useMemo(
@@ -70,6 +89,44 @@ const Header = () => {
       isHomepage && !isScrolled ? "hover:bg-gray-100/20" : "hover:bg-gray-100",
     [isHomepage, isScrolled]
   );
+
+  const AuthStatus = ({ isMobile = false }) => {
+    if (isLoggedIn) {
+      // User is logged in: Show Account Icon
+      return (
+        <Link
+          href="/account"
+          className={
+            isMobile
+              ? "flex items-center justify-between py-2 font-medium text-gray-900 hover:text-purple-600"
+              : `p-2 rounded-full transition-colors duration-300 ${textColor} ${hoverBg}`
+          }
+          aria-label="Account"
+          onClick={isMobile ? () => setIsMenuOpen(false) : undefined}
+        >
+          {isMobile ? <span>My Account</span> : <FiUser className="w-6 h-6" />}
+        </Link>
+      );
+    }
+
+    return (
+      <Link
+        href="/login"
+        aria-label="Login"
+        onClick={isMobile ? () => setIsMenuOpen(false) : undefined}
+        className={
+          isMobile
+            ? "flex items-center justify-between py-2 font-medium text-gray-900 hover:text-purple-600"
+            : `flex items-center gap-2 p-2 rounded-full transition-colors duration-300 ${textColor} ${hoverBg}`
+        }
+      >
+        <FiLogIn className="w-6 h-6" />
+        <span className={isMobile ? "" : "hidden sm:inline font-medium"}>
+          Login
+        </span>
+      </Link>
+    );
+  };
 
   return (
     <header
@@ -149,13 +206,7 @@ const Header = () => {
             </button> */}
 
             {/* User Account */}
-            <Link
-              href="/account"
-              className={`p-2 rounded-full transition-colors duration-300 ${textColor} ${hoverBg}`}
-              aria-label="Account"
-            >
-              <FiUser className="w-6 h-6" />
-            </Link>
+            <AuthStatus />
 
             {/* Shopping Cart with Real-time Count */}
             <Link

@@ -35,13 +35,12 @@ const contactMethods = [
 const faqs = [
   {
     question: "What is your return policy?",
-    answer:
-      "We offer a 30-day return policy on all unworn items in their original packaging. Returns are free and easy - just use our online return portal.",
+    answer: "All items are final sale. We do not offer returns for any reason.",
   },
   {
     question: "How long does shipping take?",
     answer:
-      "Standard shipping takes 5-7 business days, express shipping takes 2-3 days, and overnight shipping delivers the next business day. Free standard shipping on orders over $50.",
+      "Standard shipping takes 5-7 business days, express shipping takes 2-3 days, and overnight shipping delivers the next business day. Free standard shipping on orders over ₦100,000.",
   },
   {
     question: "Do you ship internationally?",
