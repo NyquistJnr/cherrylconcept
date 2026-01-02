@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "react-toastify";
 import OrderTrackingStatus from "../orders-component/OrderTrackingStatus";
+import { useCart } from "@/contexts/CartContext";
 import {
   FiCheckCircle,
   FiAlertCircle,
@@ -16,6 +17,7 @@ import Link from "next/link";
 export default function OrderCallbackURL() {
   const searchParams = useSearchParams();
 
+  const { clearCart } = useCart();
   const reference = searchParams.get("reference") || searchParams.get("trxref");
 
   const [order, setOrder] = useState(null);
@@ -44,6 +46,8 @@ export default function OrderCallbackURL() {
         if (response.ok) {
           const result = await response.json();
           setOrder(result.data);
+
+          clearCart();
         } else {
           const errorData = await response.json();
           throw new Error(
